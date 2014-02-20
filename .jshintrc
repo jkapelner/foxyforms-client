@@ -1,0 +1,12 @@
+{
+  "curly": true,
+  "immed": true,
+  "latedef": true,
+  "newcap": true,
+  "noarg": true,
+  "browser": true,
+  "node": true,
+  "nonew": true,
+  "sub": true,
+  "undef": true
+}
