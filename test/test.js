@@ -21,6 +21,17 @@ var settings = {
 };
 
 describe("Main", function(){
+  describe("#isTypeSupported()", function(){
+    it("field is not supported", function(){
+      var result = main.isTypeSupported('bad_type');
+      expect(result).to.be.false;
+    });
+    it("field is supported", function(){
+      var result = main.isTypeSupported('email');
+      expect(result).to.be.true;
+    });
+  });
+  
   describe("#login()", function(){
     var username, apiKey;
 
@@ -321,11 +332,11 @@ describe("Main", function(){
             var cleanEmail = 'support@bloatie.com';
             var phone2 = 'adfdsfdsfs';
             var email2 = 'sdfdfasdfsd';
-            main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}, {id: 'phone2', type: 'phone', value: phone2}, {id: 'email2', type: 'email', value: email2}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
-              delete(result.fields[0].data); //ignore additional data
-              delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: cleanEmail, result: true}, {id: 'phone2', type: 'phone', value: phone2, result: false, error: main.errorCodes.phone.badFormat}, {id: 'email2', type: 'email', value: email2, result: false, error: main.errorCodes.email.badFormat}]);
+            main.verify([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message'}, {id: 'email2', type: 'email', value: email2}], function(err, results){
+              expect(err).to.be.equal(main.errorCodes.main.notValid);
+              delete(results[0].data); //ignore additional data
+              delete(results[1].data); //ignore additional data
+              expect(results).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: cleanEmail, result: true}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message', result: false, error: {code: main.errorCodes.phone.badFormat.code, message: 'Custom error message'}}, {id: 'email2', type: 'email', value: email2, result: false, error: main.errorCodes.email.badFormat}]);
               done();
             });
           });
@@ -335,10 +346,11 @@ describe("Main", function(){
             var cleanPhone = '2362122222'
             var email = ' support@bloatie.com ';
             var cleanEmail = 'support@bloatie.com';
-            main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              delete(result.fields[0].data); //ignore additional data
-              delete(result.fields[1].data); //ignore additional data
-              expect(result).to.deep.equal({result: true, error: null, fields: [{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: cleanEmail, result: true}]});
+            main.verify([{id: 'phone', type: 'phone', value: phone, errorId: 'phone-error', errorMessage: 'Phone number is invalid'}, {id: 'email', type: 'email', value: email}, {id: 'name', type: 'text', value: 'test'}], function(err, results){
+              expect(err).to.be.null;
+              delete(results[0].data); //ignore additional data
+              delete(results[1].data); //ignore additional data
+              expect(results).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true, errorId: 'phone-error', errorMessage: 'Phone number is invalid'}, {id: 'email', type: 'email', value: cleanEmail, result: true}, {id: 'name', type: 'text', value: 'test', result: true}]);
               done();
             });
           });

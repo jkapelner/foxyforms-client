@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tests</title>
+  <style>
+    .form-result, .input-error {color: red;}
+  </style>
+</head>
+<body>  
+  <!-- the test forms -->
+  <h2>Form 1</h2>
+  <div class="form-result" id="msg1"></div>
+  <form id="form1" method="post">
+    Phone: <input type="phoneNA" id="phone1" name="phone" required title="Custom error message" /> <span class="input-error" id="phone1_error"></span><br/>
+    Email: <input type="email" id="email1" name="email" /> <span class="input-error" id="email1_error"></span><br/>
+    <input type="button" id="button1" value="Submit" />
+  </form>
+  <br/><hr/><br/>
+  <h2>Form 2</h2>
+  <div class="form-result" id="msg2"></div>
+  <form id="form2" method="post">
+    Phone: <input type="text" id="phone2" name="phone" /> <span class="input-error" id="phone2_error"></span><br/>
+    Email: <input type="text" id="email2" name="email" /> <span class="input-error" id="email2_error"></span><br/>
+    <input type="submit" id="button2" />
+  </form>
+  <br/><hr/><br/>
+  <h2>Form 3</h2>
+  <div class="form-result" id="msg3"></div>
+  <form id="form3" method="post">
+    Phone: <input type="text" id="phone3" name="phone" foxyforms_required="true" foxyforms_type="phone"/> <span class="input-error" id="phone3_error"></span><br/>
+    Email: <input type="text" id="email3" name="email" foxyforms_type="email"/> <span class="input-error" id="email3_error"></span><br/>
+    <input type="submit" id="button3" />
+  </form>
+  <br/><hr/><br/>
+  <h2>Form 4</h2>
+  <div class="form-result" id="msg4"></div>
+  <form id="form4" method="post">
+    Phone: <input type="tel" id="phone4" name="phone" required title="Custom error message 4" /><br/>
+    Email: <input type="email" id="email4" name="email" /><br/>
+    <input type="submit" id="button4" />
+  </form>
+  <br/><hr/><br/>
+  <h2>Form 5</h2>
+  <div class="form-result" id="msg5"></div>
+  <form id="form5" method="post">
+    Phone: <input type="tel" id="phone5" name="phone" required title="Custom error message 5" /><br/>
+    Email: <input type="email" id="email5" name="email" /><br/>
+    <input type="submit" id="button5" />
+  </form>
+  <br/><hr/><br/>
+
+  <script type="text/javascript" src="../../foxyforms-client.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery-migrate/1.1.1/jquery-migrate.min.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.11.1/jquery.validate.min.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jQuery-Validation-Engine/2.6.4/jquery.validationEngine.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jQuery-Validation-Engine/2.6.4/languages/jquery.validationEngine-en.min.js"></script>
+  
+  <!-- Setup -->
+  <script type="text/javascript">
+    function getURLParameter(name) {
+      return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null;
+    }
+    
+    var settings = {
+      countries: ['US', 'CANADA'],
+      allowTollFree: false,
+      cleanInputs: true,
+      authToken: '12345'
+    };
+
+    foxyformsClient.js.init(settings, [
+      {
+        id: 'form1',
+        buttonId: 'button1',
+        enableOnBlurEvents: true,
+        onSuccess: function(form) {
+          $(document).trigger('message', ['msg1', 'Success']);
+        },
+        onError: function(error, form) {
+          $(document).trigger('message', ['msg1', error.message]);
+        },
+        onFieldSuccess: function(elem) {
+          $(document).trigger('message', [elem.id + '_error', '']);
+        },
+        onFieldError: function(error, elem) {
+          $(document).trigger('message', [elem.id + '_error', error.message]);
+        }
+      },
+      {
+        id: 'form2',
+        enableOnBlurEvents: false,
+        fields: [
+          {
+            id: 'phone2',
+            required: true,
+            type: 'phone',
+            onError: function(error, elem) {
+              $(document).trigger('message', ['phone2_error', error.message.toUpperCase()]);
+            }
+          },
+          {
+            id: 'email2',
+            type: 'email',
+            errorMessage: 'Custom message 2'
+          }        
+        ],
+        onSuccess: function() {
+          $(document).trigger('message', ['msg2', 'Success']);
+        },
+        onError: function(error) {
+          $(document).trigger('message', ['msg2', error.message]);
+        },
+        onFieldSuccess: function(elem) {
+          $(document).trigger('message', [elem.id + '_error', '']);
+        },
+        onFieldError: function(error, elem) {
+          $(document).trigger('message', [elem.id + '_error', error.message]);
+        }
+      }
+    ]);
+    
+    $(function(){
+      $('#phone3').on('blur', function() {
+        foxyformsClient.js.verify('phone3', function(err, results) {
+          if (err) {
+            $(document).trigger('message', ['phone3_error', results[0].error.message]);
+          }
+          else {
+            $(document).trigger('message', ['phone3_error', '']);
+          }
+        });
+      });
+      
+      $('#email3').on('blur', function() {
+        foxyformsClient.js.verify([{id: 'email3', type: 'email', errorMessage: 'Custom error message 3'}], function(err, results) {
+          if (err) {
+            $(document).trigger('message', ['email3_error', results[0].error.message]);
+          }
+          else {
+            $(document).trigger('message', ['email3_error', '']);
+          }
+        });
+      });
+      
+      $('#form3').on('submit', function() {
+        foxyformsClient.js.verify('form3', function(err, results) {
+          if (err) {
+            $(document).trigger('message', ['msg3', err.message]);
+            
+            for (var i = 0; i < results.length; i++) {
+              var field = results[i];
+              
+              if (field.result) {
+                $(document).trigger('message', [field.id + '_error', '']);
+                $('#' + field.id).val(field.value);
+              }
+              else {
+                $(document).trigger('message', [field.id + '_error', field.error.message]);
+              }
+            }
+          }
+          else {
+            $(document).trigger('message', ['msg3', 'Success']);
+          }
+        });
+        
+        return false;
+      });
+      
+      $(document).on('message', function(event, id, msg) {
+        $('#' + id).text(msg);
+      });
+      
+      $('#form4').validate({
+        submitHandler: function(form) {
+          $(document).trigger('message', ['msg4', 'Success']);
+        },
+        invalidHandler: function(event, validator) {
+          $(document).trigger('message', ['msg4', 'There are errors in your form']);
+        }
+      });
+    });
+  </script>
+  
+</body>
+</html>

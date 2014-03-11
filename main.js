@@ -1,5 +1,5 @@
 var enableSSL = false;
-var apiOptions = {cleanInputs: true};
+var apiOptions = {cleanInputs: true, ignoreServerErrors: false};
 var api = {
   host: 'bloatie.com',
   port: 1337,
@@ -10,6 +10,7 @@ var api = {
 
 var validator = require('validator');
 var httpClient = require('./lib/node/http-client');
+var form = require('./lib/node/form');
 
 exports.errorCodes = {
   main: {
@@ -116,45 +117,63 @@ var validatorFuncs = {
   }
 };
 
+var formatErrors = function(error, fields) {
+  if (error) {
+    if (error.code == exports.errorCodes.main.notValid.code) {
+      for (var i = 0; i < fields.length; i++) {
+        if (!fields[i].result && fields[i].error && fields[i].errorMessage) { //if the field has a custom validation error
+          if ((fields[i].error.code >= 400) && (fields[i].error.code < 500)) { //if a field validation failed
+            fields[i].error.message = fields[i].errorMessage; //replace the error message with the custom one
+          }
+        }
+      }
+    }
+  }
+  
+  return fields;
+};
+
 var run = function(fields, callback) {
   var validate = exports.validateFields(fields); //validate the fields (i.e. check the inputs for well-formedness)
   var fieldsToVerify = [];
   
-  if (validate.result) {
-    //validation passed, check for fields that need verification from the api service
-    for (var i = 0; i < validate.fields.length; i++) {
-      if (validate.fields[i].result === null) { //field needs further verification
-        fieldsToVerify.push(validate.fields[i]);
-      }
+  //check for fields that need verification from the api service
+  for (var i = 0; i < validate.fields.length; i++) {
+    if (validate.fields[i].result === null) { //field needs further verification
+      fieldsToVerify.push(validate.fields[i]);
     }
-    
-    if (fieldsToVerify.length > 0) {
-      exports.verifyFields(fieldsToVerify, function(result){
-        if (result.fields) {
-          //merge the verification results back into the validation results, so we have the results of everything
-          for (var i = 0; i < result.fields.length; i++) {
-            for (var j = 0; j < validate.fields.length; j++) {
-              if (validate.fields[j].id === result.fields[i].id) {
-                validate.fields[j] = result.fields[i];
-                break;
-              }
+  }
+  
+  if (fieldsToVerify.length > 0) {
+    exports.verifyFields(fieldsToVerify, function(result){
+      var error;
+      
+      if (apiOptions.ignoreServerErrors && !result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
+        result.result = true; //ignore server errors
+        result.error = null;
+      }
+      
+      error = validate.result ? result.error : validate.error;
+      
+      if (result.fields) {
+        //merge the verification results back into the validation results, so we have the results of everything
+        for (var i = 0; i < result.fields.length; i++) {
+          for (var j = 0; j < validate.fields.length; j++) {
+            if (validate.fields[j].id === result.fields[i].id) {
+              validate.fields[j] = result.fields[i];
+              break;
             }
           }
         }
-        if (result.result) {
-          callback(null, validate.fields); //verification passed
-        }
-        else {
-          callback(result.error, validate.fields); //verification failed
-        }
-      });
-    }
-    else {
-      callback(null, validate.fields); //all fields passed validation
-    }
+      }
+      
+      validate.fields = formatErrors(error, validate.fields); //replace error messages with custom ones if necessary
+      callback(error, validate.fields); //return the merged results (keep the initial validation error if there was one)
+    });
   }
   else {
-    callback(validate.error, validate.fields); //validation failed, return error
+    validate.fields = formatErrors(validate.error, validate.fields); //replace error messages with custom ones if necessary
+    callback(validate.error, validate.fields); //nothing to verify, just return the validation result
   }
 };
 
@@ -170,7 +189,7 @@ exports.validateFields = function(fields) {
         fields[i].result = null; //result not yet known
         
         if (typeof field.value === 'undefined' || !field.value.length) { //if field value is empty
-          if (field.required/* || elem.getAttributeNode('required')*/) { //if field is required, then it's an error
+          if (field.required) { //if field is required, then it's an error
             fields[i].result = false;
             fields[i].error = exports.errorCodes.main.required;
             result = false;
@@ -190,6 +209,9 @@ exports.validateFields = function(fields) {
             result = false;
             error = exports.errorCodes.main.notValid;
           }
+        }
+        else {
+          fields[i].result = true; //validation not supported so ignore it
         }
       }
       else {
@@ -232,10 +254,17 @@ exports.login = function(username, apiKey, callback) {
   }, callback);
 };
 
-exports.init = function(options) {        
+exports.init = function(options, forms) {        
   setOptions(options);
+  form.init(forms, exports);
 };
 
 exports.verify = function(fields, callback) {
+  fields = form.parse(fields, exports);
   run(fields, callback);
 };
+
+exports.isTypeSupported = function(type) {
+  return validatorFuncs[type] ? true : false;
+};
+

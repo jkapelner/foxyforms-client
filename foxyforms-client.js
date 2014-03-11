@@ -1,26 +1,319 @@
 !function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),(f.foxyformsClient||(f.foxyformsClient={})).js=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"EkpMeO":[function(_dereq_,module,exports){
-var addEvent = function(elem, event, func) {
-  var oldEvent = elem[event];
-  if (typeof elem[event] != 'function') {
-    elem[event] = func;
-  } else {
-    elem[event] = function() {
-      if (oldEvent) {
-        oldEvent();
-      }
-      func();
-    };
+var formPrefix = 'foxyforms_';
+
+var initialized = false;
+var validators = _dereq_('./validators');
+
+var addEvent = function(elem, event, func, params) {
+  var onevent = 'on' + event;
+  
+  if (elem.addEventListener) { //modern browsers
+    elem.addEventListener(event, function(e){
+      elem.event = e ? e : window.event;
+      func.apply(elem, params);
+    }, false); 
+  } 
+  else if (elem.attachEvent)  { //IE8 and below
+    elem.attachEvent(onevent, function(e){
+      elem.event = e ? e : window.event;
+      func.apply(elem, params);
+    });
+  }
+  else { //just in case
+    var oldEvent = elem[onevent];
+    if (typeof elem[onevent] != 'function') {
+      elem[onevent] = function(e){
+        elem.event = e ? e : window.event;
+        func.apply(elem, params);
+      };
+    } else {
+      elem[onevent] = function(e) {
+        if (oldEvent) {
+          oldEvent();
+        }
+        elem.event = e ? e : window.event;
+        func.apply(elem, params);
+      };
+    }
   }
 };
 
-var addLoadEvent = function(func) {
-  addEvent(window, 'onload', func);
+var addLoadEvent = function(func, params) {
+  addEvent(window, 'load', func, params);
 };
 
-exports.init = function(options) {
+var addEventById = function(id, event, func, params) {
+  if (id && typeof id === 'string') {
+    var elem = document.getElementById(id);
+    
+    if (elem) {
+      addEvent(elem, event, func, params);
+      return elem;
+    }
+  }
+  
+  return null;
 };
 
-},{}],"lib/node/form":[function(_dereq_,module,exports){
+//get all the necessary field attributes (i.e. value, required, type, etc.)
+var getFieldAttributes = function(field) {
+  if (typeof field === 'string') {
+    field = {id: field};
+  }
+  
+  if ((typeof field === 'object') && (field.id)) {
+    var elem = document.getElementById(field.id);
+    
+    if (elem) {
+      if (typeof field.required === 'undefined') {
+        field.required = elem.getAttributeNode(formPrefix + 'required') ? true : (elem.getAttributeNode('required') ? true : false);
+      }
+      
+      field.value = elem.value; //always get the latest value from the form
+      
+      if (typeof field.type === 'undefined') {
+        field.type = elem.getAttribute(formPrefix + 'type');
+        
+        if (!field.type) {
+          var type = elem.getAttribute('type');
+          
+          switch (type) {
+            case 'phone':
+            case 'phoneNA':
+            case 'tel':
+              field.type = 'phone';
+              break;
+              
+            case 'email':
+              field.type = type;
+              break;
+          }
+        }
+      }
+      
+      if (typeof field.errorMessage === 'undefined') {
+        var msg = elem.getAttribute(formPrefix + 'error_message');
+        
+        if (msg) {
+          field.errorMessage = msg;
+        }
+        else {
+          msg = elem.getAttribute('title');
+          
+          if (msg) {
+            field.errorMessage = msg;
+          }
+        }
+      }
+    }
+  }
+  
+  return field;
+};
+
+//show validation error
+var showError = function(error, elem) {
+  /*
+  var msgId = formPrefix + 'error_' + elem.id;
+  var msgElem = document.getElementById(msgId);
+  
+  if (msgElem) {
+    msgElem.removeAttribute('style');
+  }
+  else {
+    msgElem = document.createElement('div');
+    
+    if (msgElem) {
+      msgElem.innerHTML = error.message;
+      
+    }
+  }
+  */
+};
+
+//clear validation error
+var clearError = function(elem) {
+  /*
+  var msgId = formPrefix + 'error_' + elem.id;
+  var msgElem = document.getElementById(msgId);
+  
+  if (msgElem) {
+    var attr = msgElem.getAttributeNode('style');
+    
+    if (attr) {
+      attr.value = 'display: none;';
+    }
+    else {
+      attr = document.createAttribute('style');
+      attr.value = 'display: none;';
+      msgElem.setAttributeNode(attr);
+    }
+  }
+  */
+};
+
+var processResults = function(formData, results, focusFlag) {
+  var focusElem = null;
+  
+  for (var i = 0; i < results.length; i++) {
+    var field = results[i];
+    var elem = document.getElementById(field.id);
+    
+    if (elem) {
+      elem.value = field.value; //update the form field's value with the result from validation (it might have been cleaned)
+      
+      if (field.result) { //if field validation was successful
+        if (field.onSuccess && (typeof field.onSuccess === 'function')) {
+          field.onSuccess(elem); //custom handler defined for the individual field
+        }
+        else if (formData.onFieldSuccess && (typeof formData.onFieldSuccess === 'function')) {
+          formData.onFieldSuccess(elem); //custom handler defined for all fields
+        }
+        else {
+          clearError(elem); //default handler - clear the error message
+        }
+      }
+      else { //if field validation failed
+        if (field.onError && (typeof field.onError === 'function')) {
+          field.onError(field.error, elem); //custom handler defined for the individual field
+        }
+        else if (formData.onFieldError && (typeof formData.onFieldError === 'function')) {
+          formData.onFieldError(field.error, elem); //custom handler defined for all fields
+        }
+        else {
+          showError(field.error, elem); //default handler - show the error message
+        }
+        
+        if (!focusElem && focusFlag) { //focus the 1st failed field
+          focusElem = elem;
+          focusElem.focus();
+        }
+      }
+    }
+  }
+};
+
+
+//parse the fields for the data we need to validate
+exports.parse = function(fields, verifyController) {
+  if (typeof fields === 'object') {
+    //if 'fields' is an array, input fields will be defined in the array
+    for (var i = 0; i < fields.length; i++) {
+      fields[i] = getFieldAttributes(fields[i]);
+    }
+  }
+  else if (typeof fields === 'string') {
+    //if 'fields' is an id string, get all the input fields marked for verification that are descendents of the element with the matching id
+    var id = fields;
+    var elem = document.getElementById(id);
+    fields = [];
+    
+    if (elem) {
+      var inputs = [];
+
+      if (elem.nodeName.toLowerCase() == 'input') { //if this is an input element, use it
+        inputs.push(elem);
+      }
+      else { //otherwise we'll look for child input elements of this node
+        inputs = elem.getElementsByTagName('input');
+      }
+      
+      for (var i = 0; i < inputs.length; i++) {
+        var id = inputs[i].getAttribute('id');
+        
+        if (id) {
+          var field = getFieldAttributes(id); 
+
+          if (field.type && verifyController.isTypeSupported(field.type)) {
+            fields.push(field);
+          }
+        }
+      }
+    }
+  }
+  
+  return fields;
+}
+
+exports.init = function(forms, verifyController) {
+  if (!initialized) {
+    validators.update(verifyController); //update 3rd party validators if they exist
+    if (forms && (typeof forms === 'object')) {
+      addLoadEvent(function(forms){
+        for (var i = 0; i < forms.length; i++) {
+          var formData = forms[i];
+          
+          if (formData && (typeof formData === 'object') && formData.id) {
+            var eventId = formData.id;
+            var event = 'submit';
+            
+            if (formData.buttonId) {
+              eventId = formData.buttonId;
+              event = 'click';
+            }
+            
+            if (!formData.fields) {
+              formData.fields = formData.id; //if the form fields are not defined, then just use the form's id so the fields will get parsed
+            }
+            
+            formData.fields = exports.parse(formData.fields, verifyController); //parse the fields we need to validate
+            
+            //add event to validate fields upon form submission
+            addEventById(eventId, event, function(formData){
+              //prevent the default form submission
+              if (this.event) {
+                if (this.event.preventDefault) {
+                  this.event.preventDefault();
+                }
+                else {
+                  this.event.returnValue = false;
+                }
+              }
+              
+              verifyController.verify(formData.fields, function(err, results) {
+                var form = document.getElementById(formData.id);
+                
+                processResults(formData, results, true/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
+                
+                if (err) { //validation failed
+                  if (formData.onError && (typeof formData.onError === 'function')) {
+                    formData.onError(err, form); //custom handler defined, so call it
+                  }                  
+                }
+                else { //validation was successful
+                  if (formData.onSuccess && (typeof formData.onSuccess === 'function')) {
+                    formData.onSuccess(form); //custom handler defined, so call it
+                  }
+                  else {
+                    //default handler - submit the form                   
+                    if (form) {
+                      form.submit();
+                    }
+                  }
+                }
+              });
+            }, [formData]);
+            
+            if (formData.enableOnBlurEvents) {
+              for (var j = 0; j < formData.fields.length; j++) { //add onblur events for each input field
+                var field = formData.fields[j];
+                addEventById(field.id, 'blur', function(formData, field) {
+                  verifyController.verify([field], function(err, results) {
+                    processResults(formData, results, false/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
+                  });
+                }, [formData, field]);
+              }
+            }
+          }
+        }    
+      }, [forms]);
+    }
+    
+    intialized = true; //we only want to allow this to be called once
+  }
+};
+
+},{"./validators":5}],"./lib/node/form":[function(_dereq_,module,exports){
 module.exports=_dereq_('EkpMeO');
 },{}],"BX/C5g":[function(_dereq_,module,exports){
 // ----------------------------------------------------------
@@ -42,7 +335,6 @@ module.exports=_dereq_('EkpMeO');
 // UPDATE: Now using Live NodeList idea from @jdalton
 
 var ie = (function(){
-
     var undef,
         v = 3,
         div = document.createElement('div'),
@@ -159,11 +451,230 @@ exports.request = function(options, postData, callback) {
 };
 
         
-},{}],"lib/node/http-client":[function(_dereq_,module,exports){
+},{}],"./lib/node/http-client":[function(_dereq_,module,exports){
 module.exports=_dereq_('BX/C5g');
 },{}],5:[function(_dereq_,module,exports){
+//update 3rd party validators such as jquery validate with our own validation methods
+exports.update = function(controller) {
+  if (window.jQuery) { //if jquery is loaded
+    (function($) {
+    
+      //jquery validator
+      if ($.validator) { //if jquery validator is being used
+        $.extend($.validator, {
+          addAsyncMethod: function(name, method, message) {
+            $.validator.addMethod(name, function( value, element, param ) {
+              if ( this.optional(element) ) {
+                return "dependency-mismatch";
+              }
+
+              var previous = this.previousValue(element);
+              if (!this.settings.messages[element.name] ) {
+                this.settings.messages[element.name] = {};
+              }
+              previous.originalMessage = this.settings.messages[element.name][name];
+              this.settings.messages[element.name][name] = previous.message;
+
+              if ( previous.old === value ) {
+                return previous.valid;
+              }
+
+              previous.old = value;
+              var validator = this;
+              this.startRequest(element);
+              var data = {};
+              data[element.name] = value;
+              
+              method(value, element, function(err) {
+                validator.settings.messages[element.name][name] = previous.originalMessage;
+                var valid = err ? false : true;
+
+                if ( valid ) {
+                  var submitted = validator.formSubmitted;
+                  validator.prepareElement(element);
+                  validator.formSubmitted = submitted;
+                  validator.successList.push(element);
+                  delete validator.invalid[element.name];
+                  validator.showErrors();
+                } else {
+                  var errors = {};
+                  var message = err || validator.defaultMessage( element, name );
+                  errors[element.name] = previous.message = $.isFunction(message) ? message(value) : message;
+                  validator.invalid[element.name] = true;
+                  validator.showErrors(errors);
+                }
+                previous.valid = valid;
+                validator.stopRequest(element, valid);
+              }, param);
+              return "pending";
+            }, message);
+          }
+        });
+        
+        $.validator.addAsyncMethod("email", function(value, element, callback) {
+          controller.verify([element.id], function(err, results) {
+            var error = results[0].result ? null : results[0].error.message;
+            callback(error);
+          }, "Please enter a valid email address.");
+        });      
+        $.validator.addAsyncMethod("phoneNA", function(value, element, callback) {
+          controller.verify([element.id], function(err, results) {
+            var error = results[0].result ? null : results[0].error.message;
+            callback(error);
+          }, "Please enter a valid phone number.");
+        });    
+        $.validator.addAsyncMethod("tel", function(value, element, callback) {
+          controller.verify([element.id], function(err, results) {
+            var error = results[0].result ? null : results[0].error.message;
+            callback(error);
+          }, "Please enter a valid phone number.");
+        });    
+      }
+      
+      //jquery validation engine
+      if ($.validationEngine) { //if jquery validation engine is being used
+        $.extend(controller, {
+          jqv: function(field, rules, i, options) {
+            var errorSelector = rules[i + 1];
+            var rule = options.allrules[errorSelector];
+            var extraData = rule.extraData;
+            var extraDataDynamic = rule.extraDataDynamic;
+            var data = {
+              "fieldId" : field.attr("id"),
+              "fieldValue" : field.val()
+            };
+
+            if (typeof extraData === "object") {
+              $.extend(data, extraData);
+            } else if (typeof extraData === "string") {
+              var tempData = extraData.split("&");
+              for(var i = 0; i < tempData.length; i++) {
+                var values = tempData[i].split("=");
+                if (values[0] && values[0]) {
+                  data[values[0]] = values[1];
+                }
+              }
+            }
+
+            if (extraDataDynamic) {
+              var tmpData = [];
+              var domIds = String(extraDataDynamic).split(",");
+              for (var i = 0; i < domIds.length; i++) {
+                var id = domIds[i];
+                if ($(id).length) {
+                  var inputValue = field.closest("form, .validationEngineContainer").find(id).val();
+                  var keyValue = id.replace('#', '') + '=' + escape(inputValue);
+                  data[id.replace('#', '')] = inputValue;
+                }
+              }
+            }
+
+            // If a field change event triggered this we want to clear the cache for this ID
+            if (options.eventTrigger == "field") {
+              delete(options.ajaxValidCache[field.attr("id")]);
+            }
+
+            // If there is an error or if the the field is already validated, do not re-execute AJAX
+            if (!options.isError && !methods._checkAjaxFieldStatus(field.attr("id"), options)) {
+              $.ajax({
+                type: options.ajaxFormValidationMethod,
+                url: rule.url,
+                cache: false,
+                dataType: "json",
+                data: data,
+                field: field,
+                rule: rule,
+                methods: methods,
+                options: options,
+                beforeSend: function() {},
+                error: function(data, transport) {
+                  if (options.onFailure) {
+                    options.onFailure(data, transport);
+                  } else {
+                    methods._ajaxError(data, transport);
+                  }
+                },
+                success: function(json) {
+                  // asynchronously called on success, data is the json answer from the server
+                  var errorFieldId = json[0];
+                  //var errorField = $($("#" + errorFieldId)[0]);
+                  var errorField = $("#"+ errorFieldId).eq(0);
+
+                  // make sure we found the element
+                  if (errorField.length == 1) {
+                    var status = json[1];
+                    // read the optional msg from the server
+                    var msg = json[2];
+                    if (!status) {
+                      // Houston we got a problem - display an red prompt
+                      options.ajaxValidCache[errorFieldId] = false;
+                      options.isError = true;
+
+                      // resolve the msg prompt
+                      if(msg) {
+                        if (options.allrules[msg]) {
+                          var txt = options.allrules[msg].alertText;
+                          if (txt) {
+                            msg = txt;
+                          }
+                        }
+                      }
+                      else {
+                        msg = rule.alertText;
+                      }
+
+                      if (options.showPrompts) {
+                        methods._showPrompt(errorField, msg, "", true, options);
+                      }
+                    } 
+                    else {
+                      options.ajaxValidCache[errorFieldId] = true;
+
+                      // resolves the msg prompt
+                      if(msg) {
+                        if (options.allrules[msg]) {
+                          var txt = options.allrules[msg].alertTextOk;
+                          if (txt) {
+                            msg = txt;
+                          }
+                        }
+                      }
+                      else {
+                        msg = rule.alertTextOk;
+                      }
+
+                      if (options.showPrompts) {
+                        // see if we should display a green prompt
+                        if (msg) {
+                          methods._showPrompt(errorField, msg, "pass", true, options);
+                        }
+                        else {
+                          methods._closePrompt(errorField);
+                        }
+                      }
+
+                      // If a submit form triggered this, we want to re-submit the form
+                      if (options.eventTrigger == "submit") {
+                        field.closest("form").submit();
+                      }
+                    }
+                  }
+                  errorField.trigger("jqv.field.result", [errorField, options.isError, msg]);
+                }
+              });
+
+              return rule.alertTextLoad;
+            }
+          }
+        });
+      }
+    }(window.jQuery));
+  }
+};
+
+},{}],6:[function(_dereq_,module,exports){
 var enableSSL = false;
-var apiOptions = {cleanInputs: true};
+var apiOptions = {cleanInputs: true, ignoreServerErrors: false};
 var api = {
   host: 'bloatie.com',
   port: 1337,
@@ -174,6 +685,7 @@ var api = {
 
 var validator = _dereq_('validator');
 var httpClient = _dereq_('./lib/node/http-client');
+var form = _dereq_('./lib/node/form');
 
 exports.errorCodes = {
   main: {
@@ -280,45 +792,63 @@ var validatorFuncs = {
   }
 };
 
+var formatErrors = function(error, fields) {
+  if (error) {
+    if (error.code == exports.errorCodes.main.notValid.code) {
+      for (var i = 0; i < fields.length; i++) {
+        if (!fields[i].result && fields[i].error && fields[i].errorMessage) { //if the field has a custom validation error
+          if ((fields[i].error.code >= 400) && (fields[i].error.code < 500)) { //if a field validation failed
+            fields[i].error.message = fields[i].errorMessage; //replace the error message with the custom one
+          }
+        }
+      }
+    }
+  }
+  
+  return fields;
+};
+
 var run = function(fields, callback) {
   var validate = exports.validateFields(fields); //validate the fields (i.e. check the inputs for well-formedness)
   var fieldsToVerify = [];
   
-  if (validate.result) {
-    //validation passed, check for fields that need verification from the api service
-    for (var i = 0; i < validate.fields.length; i++) {
-      if (validate.fields[i].result === null) { //field needs further verification
-        fieldsToVerify.push(validate.fields[i]);
-      }
+  //check for fields that need verification from the api service
+  for (var i = 0; i < validate.fields.length; i++) {
+    if (validate.fields[i].result === null) { //field needs further verification
+      fieldsToVerify.push(validate.fields[i]);
     }
-    
-    if (fieldsToVerify.length > 0) {
-      exports.verifyFields(fieldsToVerify, function(result){
-        if (result.fields) {
-          //merge the verification results back into the validation results, so we have the results of everything
-          for (var i = 0; i < result.fields.length; i++) {
-            for (var j = 0; j < validate.fields.length; j++) {
-              if (validate.fields[j].id === result.fields[i].id) {
-                validate.fields[j] = result.fields[i];
-                break;
-              }
+  }
+  
+  if (fieldsToVerify.length > 0) {
+    exports.verifyFields(fieldsToVerify, function(result){
+      var error;
+      
+      if (apiOptions.ignoreServerErrors && !result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
+        result.result = true; //ignore server errors
+        result.error = null;
+      }
+      
+      error = validate.result ? result.error : validate.error;
+      
+      if (result.fields) {
+        //merge the verification results back into the validation results, so we have the results of everything
+        for (var i = 0; i < result.fields.length; i++) {
+          for (var j = 0; j < validate.fields.length; j++) {
+            if (validate.fields[j].id === result.fields[i].id) {
+              validate.fields[j] = result.fields[i];
+              break;
             }
           }
         }
-        if (result.result) {
-          callback(null, validate.fields); //verification passed
-        }
-        else {
-          callback(result.error, validate.fields); //verification failed
-        }
-      });
-    }
-    else {
-      callback(null, validate.fields); //all fields passed validation
-    }
+      }
+      
+      validate.fields = formatErrors(error, validate.fields); //replace error messages with custom ones if necessary
+      callback(error, validate.fields); //return the merged results (keep the initial validation error if there was one)
+    });
   }
   else {
-    callback(validate.error, validate.fields); //validation failed, return error
+    validate.fields = formatErrors(validate.error, validate.fields); //replace error messages with custom ones if necessary
+    callback(validate.error, validate.fields); //nothing to verify, just return the validation result
   }
 };
 
@@ -334,7 +864,7 @@ exports.validateFields = function(fields) {
         fields[i].result = null; //result not yet known
         
         if (typeof field.value === 'undefined' || !field.value.length) { //if field value is empty
-          if (field.required/* || elem.getAttributeNode('required')*/) { //if field is required, then it's an error
+          if (field.required) { //if field is required, then it's an error
             fields[i].result = false;
             fields[i].error = exports.errorCodes.main.required;
             result = false;
@@ -354,6 +884,9 @@ exports.validateFields = function(fields) {
             result = false;
             error = exports.errorCodes.main.notValid;
           }
+        }
+        else {
+          fields[i].result = true; //validation not supported so ignore it
         }
       }
       else {
@@ -396,17 +929,22 @@ exports.login = function(username, apiKey, callback) {
   }, callback);
 };
 
-exports.init = function(options) {        
+exports.init = function(options, forms) {        
   setOptions(options);
+  form.init(forms, exports);
 };
 
 exports.verify = function(fields, callback) {
+  fields = form.parse(fields, exports);
   run(fields, callback);
 };
 
-},{"./lib/node/http-client":6,"validator":7}],6:[function(_dereq_,module,exports){
+exports.isTypeSupported = function(type) {
+  return validatorFuncs[type] ? true : false;
+};
 
-},{}],7:[function(_dereq_,module,exports){
+
+},{"./lib/node/form":"EkpMeO","./lib/node/http-client":"BX/C5g","validator":7}],7:[function(_dereq_,module,exports){
 /*!
  * Copyright (c) 2014 Chris O'Hara <cohara87@gmail.com>
  *
@@ -743,6 +1281,6 @@ exports.verify = function(fields, callback) {
 
 });
 
-},{}]},{},[5])
-(5)
+},{}]},{},[6])
+(6)
 });

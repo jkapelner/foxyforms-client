@@ -14,11 +14,10 @@ module.exports = function(grunt) {
         src: 'main.js',
         dest: '<%= pkg.name %>.js',
         options: {
-          aliasMappings: {
-            cwd: 'lib/browser/',
-            src: '**/*.js',
-            dest: 'lib/node/'
-          },
+          alias: [
+            './lib/browser/form.js:./lib/node/form',
+            './lib/browser/http-client.js:./lib/node/http-client'
+          ],
           ignore: ['lib/node/**/*'],
           standalone: '<%= pkg.name %>.js'
         }        
@@ -42,10 +41,11 @@ module.exports = function(grunt) {
 
   // Default task(s).
   grunt.registerTask('browser', ['jshint', 'browserify', 'uglify']);
-  grunt.registerTask('test', 'run the tests', function(username, apiKey){
+  grunt.registerTask('test', 'run the tests', function(username, apiKey, debug){
     if (apiKey && username) {
       var done = this.async();
-      require('child_process').exec('mocha --reporter spec test/test.js --user=' + username + ' --apiKey=' + apiKey, function (err, stdout) {
+      var debugCmd = debug ? '--debug-brk ' : '';
+      require('child_process').exec('mocha ' + debugCmd + '--reporter spec test/test.js --user=' + username + ' --apiKey=' + apiKey, function (err, stdout) {
         grunt.log.write(stdout);
         done(err);
       });
