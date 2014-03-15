@@ -1,8 +1,8 @@
 !function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),(f.foxyformsClient||(f.foxyformsClient={})).js=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"EkpMeO":[function(_dereq_,module,exports){
 var formPrefix = 'foxyforms_';
 
+var validators = _dereq_('./validators.js');
 var initialized = false;
-var validators = _dereq_('./validators');
 
 var addEvent = function(elem, event, func, params) {
   var onevent = 'on' + event;
@@ -193,7 +193,6 @@ var processResults = function(formData, results, focusFlag) {
   }
 };
 
-
 //parse the fields for the data we need to validate
 exports.parse = function(fields, verifyController) {
   if (typeof fields === 'object') {
@@ -237,7 +236,7 @@ exports.parse = function(fields, verifyController) {
 
 exports.init = function(forms, verifyController) {
   if (!initialized) {
-    validators.update(verifyController); //update 3rd party validators if they exist
+    validators.update(verifyController);
     if (forms && (typeof forms === 'object')) {
       addLoadEvent(function(forms){
         for (var i = 0; i < forms.length; i++) {
@@ -313,7 +312,7 @@ exports.init = function(forms, verifyController) {
   }
 };
 
-},{"./validators":5}],"./lib/node/form":[function(_dereq_,module,exports){
+},{"./validators.js":5}],"./lib/node/form":[function(_dereq_,module,exports){
 module.exports=_dereq_('EkpMeO');
 },{}],"BX/C5g":[function(_dereq_,module,exports){
 // ----------------------------------------------------------
@@ -533,140 +532,11 @@ exports.update = function(controller) {
       
       //jquery validation engine
       if ($.validationEngine) { //if jquery validation engine is being used
-        $.extend(controller, {
-          jqv: function(field, rules, i, options) {
-            var errorSelector = rules[i + 1];
-            var rule = options.allrules[errorSelector];
-            var extraData = rule.extraData;
-            var extraDataDynamic = rule.extraDataDynamic;
-            var data = {
-              "fieldId" : field.attr("id"),
-              "fieldValue" : field.val()
-            };
-
-            if (typeof extraData === "object") {
-              $.extend(data, extraData);
-            } else if (typeof extraData === "string") {
-              var tempData = extraData.split("&");
-              for(var i = 0; i < tempData.length; i++) {
-                var values = tempData[i].split("=");
-                if (values[0] && values[0]) {
-                  data[values[0]] = values[1];
-                }
-              }
-            }
-
-            if (extraDataDynamic) {
-              var tmpData = [];
-              var domIds = String(extraDataDynamic).split(",");
-              for (var i = 0; i < domIds.length; i++) {
-                var id = domIds[i];
-                if ($(id).length) {
-                  var inputValue = field.closest("form, .validationEngineContainer").find(id).val();
-                  var keyValue = id.replace('#', '') + '=' + escape(inputValue);
-                  data[id.replace('#', '')] = inputValue;
-                }
-              }
-            }
-
-            // If a field change event triggered this we want to clear the cache for this ID
-            if (options.eventTrigger == "field") {
-              delete(options.ajaxValidCache[field.attr("id")]);
-            }
-
-            // If there is an error or if the the field is already validated, do not re-execute AJAX
-            if (!options.isError && !methods._checkAjaxFieldStatus(field.attr("id"), options)) {
-              $.ajax({
-                type: options.ajaxFormValidationMethod,
-                url: rule.url,
-                cache: false,
-                dataType: "json",
-                data: data,
-                field: field,
-                rule: rule,
-                methods: methods,
-                options: options,
-                beforeSend: function() {},
-                error: function(data, transport) {
-                  if (options.onFailure) {
-                    options.onFailure(data, transport);
-                  } else {
-                    methods._ajaxError(data, transport);
-                  }
-                },
-                success: function(json) {
-                  // asynchronously called on success, data is the json answer from the server
-                  var errorFieldId = json[0];
-                  //var errorField = $($("#" + errorFieldId)[0]);
-                  var errorField = $("#"+ errorFieldId).eq(0);
-
-                  // make sure we found the element
-                  if (errorField.length == 1) {
-                    var status = json[1];
-                    // read the optional msg from the server
-                    var msg = json[2];
-                    if (!status) {
-                      // Houston we got a problem - display an red prompt
-                      options.ajaxValidCache[errorFieldId] = false;
-                      options.isError = true;
-
-                      // resolve the msg prompt
-                      if(msg) {
-                        if (options.allrules[msg]) {
-                          var txt = options.allrules[msg].alertText;
-                          if (txt) {
-                            msg = txt;
-                          }
-                        }
-                      }
-                      else {
-                        msg = rule.alertText;
-                      }
-
-                      if (options.showPrompts) {
-                        methods._showPrompt(errorField, msg, "", true, options);
-                      }
-                    } 
-                    else {
-                      options.ajaxValidCache[errorFieldId] = true;
-
-                      // resolves the msg prompt
-                      if(msg) {
-                        if (options.allrules[msg]) {
-                          var txt = options.allrules[msg].alertTextOk;
-                          if (txt) {
-                            msg = txt;
-                          }
-                        }
-                      }
-                      else {
-                        msg = rule.alertTextOk;
-                      }
-
-                      if (options.showPrompts) {
-                        // see if we should display a green prompt
-                        if (msg) {
-                          methods._showPrompt(errorField, msg, "pass", true, options);
-                        }
-                        else {
-                          methods._closePrompt(errorField);
-                        }
-                      }
-
-                      // If a submit form triggered this, we want to re-submit the form
-                      if (options.eventTrigger == "submit") {
-                        field.closest("form").submit();
-                      }
-                    }
-                  }
-                  errorField.trigger("jqv.field.result", [errorField, options.isError, msg]);
-                }
-              });
-
-              return rule.alertTextLoad;
-            }
-          }
-        });
+        controller.jQueryValidateEngineHandler = function(field, rules, i, options, callback) {
+          controller.verify([field.attr('id')], function(err, results) {
+            callback(results[0].result, results[0].error ? results[0].error.message : null);
+          });
+        };
       }
     }(window.jQuery));
   }

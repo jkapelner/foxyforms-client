@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Tests</title>
+	<link rel="stylesheet" href="css/validationEngine.jquery.css" type="text/css"/>
   <style>
     .form-result, .input-error {color: red;}
   </style>
@@ -44,8 +45,8 @@
   <h2>Form 5</h2>
   <div class="form-result" id="msg5"></div>
   <form id="form5" method="post">
-    Phone: <input type="tel" id="phone5" name="phone" required title="Custom error message 5" /><br/>
-    Email: <input type="email" id="email5" name="email" /><br/>
+    Phone: <input type="text" foxyforms_type="phone" id="phone5" name="phone" class="validate[required,asyncFuncCall[jqvFunc]]" title="Custom error message 5" /><br/>
+    Email: <input type="email" id="email5" name="email" class="validate[required,asyncFuncCall[jqvFunc]]" /><br/>
     <input type="submit" id="button5" />
   </form>
   <br/><hr/><br/>
@@ -54,11 +55,11 @@
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery-migrate/1.1.1/jquery-migrate.min.js"></script>
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.11.1/jquery.validate.min.js"></script>
-  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jQuery-Validation-Engine/2.6.4/jquery.validationEngine.js"></script>
+  <script type="text/javascript" src="lib/jquery.validationEngine.min.js"></script>
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jQuery-Validation-Engine/2.6.4/languages/jquery.validationEngine-en.min.js"></script>
   
   <!-- Setup -->
-  <script type="text/javascript">
+  <script type="text/javascript">    
     function getURLParameter(name) {
       return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null;
     }
@@ -121,6 +122,8 @@
       }
     ]);
     
+    var jqvFunc = foxyformsClient.js.jQueryValidateEngineHandler;
+
     $(function(){
       $('#phone3').on('blur', function() {
         foxyformsClient.js.verify('phone3', function(err, results) {
@@ -179,6 +182,12 @@
         },
         invalidHandler: function(event, validator) {
           $(document).trigger('message', ['msg4', 'There are errors in your form']);
+        }
+      });
+      
+      $("#form5").validationEngine('attach', {
+        onValidationComplete: function(form, status){
+          $(document).trigger('message', ['msg5', status ? 'Success' : 'There are errors in your form']);
         }
       });
     });
