@@ -1,8 +1,8 @@
 var enableSSL = false;
 var apiOptions = {cleanInputs: true, ignoreServerErrors: false};
 var api = {
-  host: 'bloatie.com',
-  port: 1337,
+  host: 'verifly.bloatie.com',
+  port: 80,
   sslPort: 443,
   path: '/verify',
   loginPath: '/verify/login'
@@ -47,11 +47,31 @@ var setOptions = function(options) {
   }
 };
 
+var getContentLength = function(str) {
+  var byteArray = [];
+  for (var i = 0; i < str.length; i++) {
+    if (str.charCodeAt(i) <= 0x7F) {
+      byteArray.push(str.charCodeAt(i));
+    }
+    else {
+      var h = encodeURIComponent(str.charAt(i)).substr(1).split('%');
+      for (var j = 0; j < h.length; j++) {
+        byteArray.push(parseInt(h[j], 16));
+      }
+    }
+  }
+  
+  return byteArray.length;
+};
+
 var jsonRequest = function(options, postData, callback) {
   var json = JSON.stringify(postData);
   
   options.method = 'POST';
-  options.headers = {'Content-type': 'application/json'};
+  options.headers = {
+    'Content-Type': 'application/json',
+    'Content-Length': getContentLength(json)
+  };
   httpClient.request(options, json, function(err, response) {
     if (err) { //server error
       var error = exports.errorCodes.main.serverComm;
