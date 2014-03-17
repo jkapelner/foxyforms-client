@@ -152,7 +152,7 @@ var clearError = function(elem) {
   */
 };
 
-var processResults = function(formData, results, focusFlag) {
+var processResults = function(results, formData, focusFlag) {
   var focusElem = null;
   
   for (var i = 0; i < results.length; i++) {
@@ -162,35 +162,41 @@ var processResults = function(formData, results, focusFlag) {
     if (elem) {
       elem.value = field.value; //update the form field's value with the result from validation (it might have been cleaned)
       
-      if (field.result) { //if field validation was successful
-        if (field.onSuccess && (typeof field.onSuccess === 'function')) {
-          field.onSuccess(elem); //custom handler defined for the individual field
+      if (formData) {
+        if (field.result) { //if field validation was successful
+          if (field.onSuccess && (typeof field.onSuccess === 'function')) {
+            field.onSuccess(elem); //custom handler defined for the individual field
+          }
+          else if (formData.onFieldSuccess && (typeof formData.onFieldSuccess === 'function')) {
+            formData.onFieldSuccess(elem); //custom handler defined for all fields
+          }
+          else {
+            clearError(elem); //default handler - clear the error message
+          }
         }
-        else if (formData.onFieldSuccess && (typeof formData.onFieldSuccess === 'function')) {
-          formData.onFieldSuccess(elem); //custom handler defined for all fields
-        }
-        else {
-          clearError(elem); //default handler - clear the error message
-        }
-      }
-      else { //if field validation failed
-        if (field.onError && (typeof field.onError === 'function')) {
-          field.onError(field.error, elem); //custom handler defined for the individual field
-        }
-        else if (formData.onFieldError && (typeof formData.onFieldError === 'function')) {
-          formData.onFieldError(field.error, elem); //custom handler defined for all fields
-        }
-        else {
-          showError(field.error, elem); //default handler - show the error message
-        }
-        
-        if (!focusElem && focusFlag) { //focus the 1st failed field
-          focusElem = elem;
-          focusElem.focus();
+        else { //if field validation failed
+          if (field.onError && (typeof field.onError === 'function')) {
+            field.onError(field.error, elem); //custom handler defined for the individual field
+          }
+          else if (formData.onFieldError && (typeof formData.onFieldError === 'function')) {
+            formData.onFieldError(field.error, elem); //custom handler defined for all fields
+          }
+          else {
+            showError(field.error, elem); //default handler - show the error message
+          }
+          
+          if (!focusElem && focusFlag) { //focus the 1st failed field
+            focusElem = elem;
+            focusElem.focus();
+          }
         }
       }
     }
   }
+};
+
+exports.postProcess = function(results) {
+  processResults(results);
 };
 
 //parse the fields for the data we need to validate
@@ -272,7 +278,7 @@ exports.init = function(forms, verifyController) {
               verifyController.verify(formData.fields, function(err, results) {
                 var form = document.getElementById(formData.id);
                 
-                processResults(formData, results, true/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
+                processResults(results, formData, true/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
                 
                 if (err) { //validation failed
                   if (formData.onError && (typeof formData.onError === 'function')) {
@@ -298,7 +304,7 @@ exports.init = function(forms, verifyController) {
                 var field = formData.fields[j];
                 addEventById(field.id, 'blur', function(formData, field) {
                   verifyController.verify([field], function(err, results) {
-                    processResults(formData, results, false/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
+                    processResults(results, formData, false/*focus the error element*/); //process the results (i.e. show/hide error messages or call callbacks)
                   });
                 }, [formData, field]);
               }
@@ -733,11 +739,13 @@ var run = function(fields, callback) {
       }
       
       validate.fields = formatErrors(error, validate.fields); //replace error messages with custom ones if necessary
+      form.postProcess(validate.fields);
       callback(error, validate.fields); //return the merged results (keep the initial validation error if there was one)
     });
   }
   else {
     validate.fields = formatErrors(validate.error, validate.fields); //replace error messages with custom ones if necessary
+    form.postProcess(validate.fields);
     callback(validate.error, validate.fields); //nothing to verify, just return the validation result
   }
 };

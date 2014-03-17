@@ -188,11 +188,13 @@ var run = function(fields, callback) {
       }
       
       validate.fields = formatErrors(error, validate.fields); //replace error messages with custom ones if necessary
+      form.postProcess(validate.fields);
       callback(error, validate.fields); //return the merged results (keep the initial validation error if there was one)
     });
   }
   else {
     validate.fields = formatErrors(validate.error, validate.fields); //replace error messages with custom ones if necessary
+    form.postProcess(validate.fields);
     callback(validate.error, validate.fields); //nothing to verify, just return the validation result
   }
 };
