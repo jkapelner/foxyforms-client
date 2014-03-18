@@ -71,7 +71,7 @@
       authToken: '12345'
     };
 
-    foxyformsClient.js.init(settings, [
+    foxyformsClient.init(settings, [
       {
         id: 'form1',
         buttonId: 'button1',
@@ -122,11 +122,11 @@
       }
     ]);
     
-    var jqvFunc = foxyformsClient.js.jQueryValidateEngineHandler;
+    var jqvFunc = foxyformsClient.jQueryValidateEngineHandler;
 
     $(function(){
       $('#phone3').on('blur', function() {
-        foxyformsClient.js.verify('phone3', function(err, results) {
+        foxyformsClient.verify('phone3', function(err, results) {
           if (err) {
             $(document).trigger('message', ['phone3_error', results[0].error.message]);
           }
@@ -137,7 +137,7 @@
       });
       
       $('#email3').on('blur', function() {
-        foxyformsClient.js.verify([{id: 'email3', type: 'email', errorMessage: 'Custom error message 3'}], function(err, results) {
+        foxyformsClient.verify([{id: 'email3', type: 'email', errorMessage: 'Custom error message 3'}], function(err, results) {
           if (err) {
             $(document).trigger('message', ['email3_error', results[0].error.message]);
           }
@@ -148,7 +148,7 @@
       });
       
       $('#form3').on('submit', function() {
-        foxyformsClient.js.verify('form3', function(err, results) {
+        foxyformsClient.verify('form3', function(err, results) {
           if (err) {
             $(document).trigger('message', ['msg3', err.message]);
             

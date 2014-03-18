@@ -56,14 +56,14 @@ describe("Main", function(){
     it("should attempt to login to the API and fail", function(done){
       main.login('badname', 'badkey', function(result) {
         expect(result).to.not.have.property('authToken');
-        expectError(result, main.errorCodes.main.badLogin);
+        expectError(result, main.getError('main', 'badLogin'));
         done();
       });
     });
     
     it("verification should fail if no api token", function(done){
       main.verifyFields([{id: 'phone', type: 'phone'}, {id: 'email', type: 'email'}], function(result){
-        expectError(result, main.errorCodes.main.badToken);
+        expectError(result, main.getError('main', 'badToken'));
         done();
       });
     });
@@ -85,21 +85,21 @@ describe("Main", function(){
         describe('#validateFields()', function(){
           it("validation should fail if fields are invalid", function(){
             var result = main.validateFields();
-            expectError(result, main.errorCodes.main.badData);
+            expectError(result, main.getError('main', 'badData'));
             result = main.validateFields([]);
-            expectError(result, main.errorCodes.main.badData);
+            expectError(result, main.getError('main', 'badData'));
             result = main.validateFields(['asdfas']);
-            expectError(result, main.errorCodes.main.badData);
+            expectError(result, main.getError('main', 'badData'));
             result = main.validateFields([{id: 'phone', type: 'phone'}, {type: 'email'}]);
-            expectError(result, main.errorCodes.main.badData);
+            expectError(result, main.getError('main', 'badData'));
             result = main.validateFields(['phone1', {id: 'phone', type: 'phone'}]);
-            expectError(result, main.errorCodes.main.badData); 
+            expectError(result, main.getError('main', 'badData')); 
           });
           
           it("validation should fail if required fields are empty", function(){
             var result = main.validateFields([{id: 'phone', type: 'phone'}, {id: 'email', type: 'email', required: true, value: ''}]);
-            expectError(result, main.errorCodes.main.notValid);
-            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', result: true}, {id: 'email', type: 'email', required: true, value: '', result: false, error: main.errorCodes.main.required}]);
+            expectError(result, main.getError('main', 'notValid'));
+            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', result: true}, {id: 'email', type: 'email', required: true, value: '', result: false, error: main.getError('main', 'required')}]);
           });
           
           it("validation should pass empty fields that are not required", function(){            
@@ -111,32 +111,32 @@ describe("Main", function(){
             var phone = ['5165555555'];
             var email = 'asdfa@adsfdsfd.com';
             var result = main.validateFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}]);
-            expectError(result, main.errorCodes.main.notValid);
-            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.errorCodes.phone.badType}, {id: 'email', type: 'email', value: email, result: null}]);
+            expectError(result, main.getError('main', 'notValid'));
+            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.getError('phone', 'badType')}, {id: 'email', type: 'email', value: email, result: null}]);
           });
           
           it("validation should fail for invalid data type for email", function(){            
             var phone = '5165555555';
             var email = ['asdfa@adsfdf.com'];
             var result = main.validateFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}]);
-            expectError(result, main.errorCodes.main.notValid);
-            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: null}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.badType}]);         
+            expectError(result, main.getError('main', 'notValid'));
+            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: null}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'badType')}]);         
           });
           
           it("validation should fail for bad phone format", function(){
             var phone = '516555555a';
             var email = 'asdfa@adsfdf.com';
             var result = main.validateFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}]);
-            expectError(result, main.errorCodes.main.notValid);
-            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.errorCodes.phone.badFormat}, {id: 'email', type: 'email', value: email, result: null}]);         
+            expectError(result, main.getError('main', 'notValid'));
+            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.getError('phone', 'badFormat')}, {id: 'email', type: 'email', value: email, result: null}]);         
           });
           
           it("validation should fail for bad email format", function(){
             var phone = '5165555555';
             var email = 'asdfa@adsfdfdfa';
             var result = main.validateFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}]);
-            expectError(result, main.errorCodes.main.notValid);
-            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: null}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.badFormat}]);
+            expectError(result, main.getError('main', 'notValid'));
+            expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: null}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'badFormat')}]);
           });
           
           it("validation should pass", function(){
@@ -151,15 +151,15 @@ describe("Main", function(){
           this.timeout(0);
           it("verification should fail if fields are invalid", function(done){
             main.verifyFields(null, function(result){
-              expectError(result, main.errorCodes.main.badData);
+              expectError(result, main.getError('main', 'badData'));
               main.verifyFields([], function(result){
-                expectError(result, main.errorCodes.main.badData);
+                expectError(result, main.getError('main', 'badData'));
                 main.verifyFields(['asdfas'], function(result){
-                  expectError(result, main.errorCodes.main.badData);
+                  expectError(result, main.getError('main', 'badData'));
                   main.verifyFields([{id: 'phone', type: 'phone'}, {type: 'email'}], function(result){
-                    expectError(result, main.errorCodes.main.badData);
+                    expectError(result, main.getError('main', 'badData'));
                     main.verifyFields(['phone1', {id: 'phone', type: 'phone'}], function(result){
-                      expectError(result, main.errorCodes.main.badData); 
+                      expectError(result, main.getError('main', 'badData')); 
                       done();
                     });
                   });
@@ -170,9 +170,9 @@ describe("Main", function(){
           
           it("verification should fail if required fields are empty", function(done){
             main.verifyFields([{id: 'phone', type: 'phone'}, {id: 'email', type: 'email', required: true, value: ''}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].warning); //ignore the warning
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', result: true}, {id: 'email', type: 'email', required: true, value: '', result: false, error: main.errorCodes.main.required}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', result: true}, {id: 'email', type: 'email', required: true, value: '', result: false, error: main.getError('main', 'required')}]);
               done();
             });
           });
@@ -190,9 +190,9 @@ describe("Main", function(){
             var phone = ['5162122222'];
             var email = 'support@bloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.errorCodes.phone.badType}, {id: 'email', type: 'email', value: email, result: true}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.getError('phone', 'badType')}, {id: 'email', type: 'email', value: email, result: true}]);
               done();
             });
           });
@@ -201,9 +201,9 @@ describe("Main", function(){
             var phone = '516212222a';
             var email = 'support@bloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.errorCodes.phone.badFormat}, {id: 'email', type: 'email', value: email, result: true}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: false, error: main.getError('phone', 'badFormat')}, {id: 'email', type: 'email', value: email, result: true}]);
               done();
             });
           });
@@ -213,9 +213,9 @@ describe("Main", function(){
             var cleanPhone = '2222122222'
             var email = 'support@bloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.errorCodes.phone.notValid}, {id: 'email', type: 'email', value: email, result: true}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.getError('phone', 'notValid')}, {id: 'email', type: 'email', value: email, result: true}]);
               done();
             });
           });
@@ -225,10 +225,10 @@ describe("Main", function(){
             var cleanPhone = '2422122222'
             var email = 'support@bloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.errorCodes.phone.wrongCountry}, {id: 'email', type: 'email', value: email, result: true}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.getError('phone', 'wrongCountry')}, {id: 'email', type: 'email', value: email, result: true}]);
               done();
             });
           });
@@ -238,10 +238,10 @@ describe("Main", function(){
             var cleanPhone = '8002122222'
             var email = 'support@bloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.errorCodes.phone.tollFree}, {id: 'email', type: 'email', value: email, result: true}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: false, error: main.getError('phone', 'tollFree')}, {id: 'email', type: 'email', value: email, result: true}]);
               done();
             });
           });
@@ -263,9 +263,9 @@ describe("Main", function(){
             var phone = '5162122222'; //US number should pass
             var email = ['support@bloatie.com'];
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.badType}]);         
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: phone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'badType')}]);         
               done();
             });
           });
@@ -275,9 +275,9 @@ describe("Main", function(){
             var cleanPhone = '2362122222'
             var email = 'supportbloatie.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.badFormat}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'badFormat')}]);
               done();
             });
           });
@@ -287,10 +287,10 @@ describe("Main", function(){
             var cleanPhone = '5162122222'
             var email = 'support@hffheuiofhfhfhewuiohfsdkhf.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
               delete(result.fields[1].data); //ignore additional data
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.noMxRecords}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'noMxRecords')}]);
               done();
             });
           });
@@ -300,11 +300,11 @@ describe("Main", function(){
             var cleanPhone = '5162122222'
             var email = 'asdfasdfasd@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
-              expectError(result, main.errorCodes.main.notValid);
+              expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
               delete(result.fields[1].data); //ignore additional data
               delete(result.fields[1].error.reason); //ignore mail reject reason
-              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.errorCodes.email.notValid}]);
+              expect(result.fields).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: email, result: false, error: main.getError('email', 'notValid')}]);
               done();
             });
           });
@@ -333,10 +333,10 @@ describe("Main", function(){
             var phone2 = 'adfdsfdsfs';
             var email2 = 'sdfdfasdfsd';
             main.verify([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message'}, {id: 'email2', type: 'email', value: email2}], function(err, results){
-              expect(err).to.be.equal(main.errorCodes.main.notValid);
+              expect(err).to.deep.equal(main.getError('main', 'notValid'));
               delete(results[0].data); //ignore additional data
               delete(results[1].data); //ignore additional data
-              expect(results).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: cleanEmail, result: true}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message', result: false, error: {code: main.errorCodes.phone.badFormat.code, message: 'Custom error message'}}, {id: 'email2', type: 'email', value: email2, result: false, error: main.errorCodes.email.badFormat}]);
+              expect(results).to.deep.equal([{id: 'phone', type: 'phone', value: cleanPhone, result: true}, {id: 'email', type: 'email', value: cleanEmail, result: true}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message', result: false, error: {code: main.getError('phone', 'badFormat').code, message: 'Custom error message'}}, {id: 'email2', type: 'email', value: email2, result: false, error: main.getError('email', 'badFormat')}]);
               done();
             });
           });

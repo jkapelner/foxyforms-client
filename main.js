@@ -12,32 +12,43 @@ var validator = require('validator');
 var httpClient = require('./lib/node/http-client');
 var form = require('./lib/node/form');
 
-exports.errorCodes = {
-  main: {
-    badData: {code: 300, message: 'Invalid data passed to API'},
-    badLogin: {code: 302, message: 'Invalid API login'},
-    badToken: {code: 303, message: 'Invalid API token'},
-    notValid: {code: 304, message: 'Validation failed'},
-    required: {code: 305, message: 'Field is required'},
-    serverComm: {code: 500, message: 'Unable to communicate with verification server'},
-    serverData: {code: 501, message: 'Server returned bad data'},
-    internal: {code: 502, message: 'Internal server error occurred'}
-  },
-  phone: {
-    badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
-    badFormat: {code: 401, message: 'Data entered is not a valid phone number - must be 10 digits'},
-    notValid: {code: 402, message: 'Phone number is invalid'},
-    wrongCountry: {code: 403, message: "Phone number doesn't match the specified countries"},
-    tollFree: {code: 404, message: "Phone number is a toll-free number, which is not allowed"}
-  },
-  email: {
-    badType: {code: 400, message: 'Invalid data type passed - must be a string'},
-    badFormat: {code: 401, message: 'Data entered is not a valid email address'},
-    noMxRecords: {code: 402, message: 'No MX Records found for domain'},
-    noResponse: {code: 403, message: 'Mail server failed to respond'},
-    notValid: {code: 404, message: 'Email address rejected by mail server'}
-  }
-};
+var errorCodes = (function() {
+  var error = {
+    main: {
+      badData: {code: 300, message: 'Invalid data passed to API'},
+      badLogin: {code: 302, message: 'Invalid API login'},
+      badToken: {code: 303, message: 'Invalid API token'},
+      notValid: {code: 304, message: 'Validation failed'},
+      required: {code: 305, message: 'Field is required'},
+      serverComm: {code: 500, message: 'Unable to communicate with verification server'},
+      serverData: {code: 501, message: 'Server returned bad data'},
+      internal: {code: 502, message: 'Internal server error occurred'}
+    },
+    phone: {
+      badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
+      badFormat: {code: 401, message: 'Data entered is not a valid phone number - must be 10 digits'},
+      notValid: {code: 402, message: 'Phone number is invalid'},
+      wrongCountry: {code: 403, message: "Phone number doesn't match the specified countries"},
+      tollFree: {code: 404, message: "Phone number is a toll-free number, which is not allowed"}
+    },
+    email: {
+      badType: {code: 400, message: 'Invalid data type passed - must be a string'},
+      badFormat: {code: 401, message: 'Data entered is not a valid email address'},
+      noMxRecords: {code: 402, message: 'No MX Records found for domain'},
+      noResponse: {code: 403, message: 'Mail server failed to respond'},
+      notValid: {code: 404, message: 'Email address rejected by mail server'}
+    }
+  };
+  
+  return {
+    get: function(fieldType, errorType) {
+      return {
+        code: error[fieldType][errorType].code,
+        message: error[fieldType][errorType].message
+      };
+    }
+  };
+})();
 
 var setOptions = function(options) {
   if (typeof options === 'object') {
@@ -74,7 +85,7 @@ var jsonRequest = function(options, postData, callback) {
   };
   httpClient.request(options, json, function(err, response) {
     if (err) { //server error
-      var error = exports.errorCodes.main.serverComm;
+      var error = errorCodes.get('main', 'serverComm');
       error.reason = err;
       callback({result: false, error: error});
     }
@@ -85,7 +96,7 @@ var jsonRequest = function(options, postData, callback) {
         callback(result);  
       }
       else { //bad data returned
-        callback({result: false, error: exports.errorCodes.main.serverData});                       
+        callback({result: false, error: errorCodes.get('main', 'serverData')});                       
       }
     }
   });
@@ -99,7 +110,7 @@ var validatorFuncs = {
       phone = phone.toString();
     }
     else if (type !== 'string') {
-      return {result: false, error: exports.errorCodes.phone.badType};
+      return {result: false, error: errorCodes.get('phone', 'badType')};
     }
 
     if (apiOptions.cleanInputs) {
@@ -112,7 +123,7 @@ var validatorFuncs = {
 
     //make sure phone number contains only 10 digits
     if ((phone.length != 10) || phone.match(/[^0-9]/)) {
-      return {result: false, error: exports.errorCodes.phone.badFormat};
+      return {result: false, error: errorCodes.get('phone', 'badFormat')};
     }
 
     return {result: true, value: phone};
@@ -121,7 +132,7 @@ var validatorFuncs = {
     var type = typeof email;
 
     if (type !== 'string') {
-      return {result: false, error: exports.errorCodes.email.badType};
+      return {result: false, error: errorCodes.get('email', 'badType')};
     }
 
     if (apiOptions.cleanInputs) {
@@ -130,7 +141,7 @@ var validatorFuncs = {
     }
 
     if (!validator.isEmail(email)) {
-      return {result: false, error: exports.errorCodes.email.badFormat};
+      return {result: false, error: errorCodes.get('email', 'badFormat')};
     }
     
     return {result: true, value: email};
@@ -139,7 +150,7 @@ var validatorFuncs = {
 
 var formatErrors = function(error, fields) {
   if (error) {
-    if (error.code == exports.errorCodes.main.notValid.code) {
+    if (error.code == errorCodes.get('main', 'notValid').code) {
       for (var i = 0; i < fields.length; i++) {
         if (!fields[i].result && fields[i].error && fields[i].errorMessage) { //if the field has a custom validation error
           if ((fields[i].error.code >= 400) && (fields[i].error.code < 500)) { //if a field validation failed
@@ -213,9 +224,9 @@ exports.validateFields = function(fields) {
         if (typeof field.value === 'undefined' || !field.value.length) { //if field value is empty
           if (field.required) { //if field is required, then it's an error
             fields[i].result = false;
-            fields[i].error = exports.errorCodes.main.required;
+            fields[i].error = errorCodes.get('main', 'required');
             result = false;
-            error = exports.errorCodes.main.notValid;
+            error = errorCodes.get('main', 'notValid');
           }
           else {
             fields[i].result = true; //field not required so it's ok to be empty
@@ -229,7 +240,7 @@ exports.validateFields = function(fields) {
               fields[i][p] = validation[p]; //merge validation result into the field object
             }
             result = false;
-            error = exports.errorCodes.main.notValid;
+            error = errorCodes.get('main', 'notValid');
           }
         }
         else {
@@ -237,13 +248,13 @@ exports.validateFields = function(fields) {
         }
       }
       else {
-        error = exports.errorCodes.main.badData;
+        error = errorCodes.get('main', 'badData');
         result = false;
       }
     }
   }
   else {
-    error = exports.errorCodes.main.badData;
+    error = errorCodes.get('main', 'badData');
     result = false;
   }
     
@@ -288,5 +299,9 @@ exports.verify = function(fields, callback) {
 
 exports.isTypeSupported = function(type) {
   return validatorFuncs[type] ? true : false;
+};
+
+exports.getError = function(fieldType, errorType) {
+  return errorCodes.get(fieldType, errorType);
 };
 

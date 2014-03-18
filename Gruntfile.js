@@ -19,7 +19,7 @@ module.exports = function(grunt) {
             './lib/browser/http-client.js:./lib/node/http-client'
           ],
           ignore: ['lib/node/**/*'],
-          standalone: '<%= pkg.name %>.js'
+          standalone: '<%= pkg.name %>'
         }        
       }
     },
