@@ -188,7 +188,7 @@ describe("Main", function(){
           
           it("verification should fail for invalid data type for phone", function(done){
             var phone = ['5162122222'];
-            var email = 'support@bloatie.com';
+            var email = 'support@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
@@ -199,7 +199,7 @@ describe("Main", function(){
                    
           it("verification should fail for bad phone format", function(done){
             var phone = '516212222a';
-            var email = 'support@bloatie.com';
+            var email = 'support@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
@@ -211,7 +211,7 @@ describe("Main", function(){
           it("verification should fail for invalid phone number", function(done){
             var phone = '(222)-212-2222'; //unknown number should fail
             var cleanPhone = '2222122222'
-            var email = 'support@bloatie.com';
+            var email = 'support@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[1].data); //ignore additional data
@@ -223,7 +223,7 @@ describe("Main", function(){
           it("verification should fail for phone number for country not allowed", function(done){
             var phone = '1-(242)-212-2222'; //bahamas number should fail
             var cleanPhone = '2422122222'
-            var email = 'support@bloatie.com';
+            var email = 'support@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
@@ -236,7 +236,7 @@ describe("Main", function(){
           it("verification should fail for toll free phone number when not allowed", function(done){
             var phone = '1-800-212-2222'; //toll free number should fail
             var cleanPhone = '8002122222'
-            var email = 'support@bloatie.com';
+            var email = 'support@mumusoft.com';
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
@@ -261,7 +261,7 @@ describe("Main", function(){
 
           it("verification should fail for invalid data type for email", function(done){            
             var phone = '5162122222'; //US number should pass
-            var email = ['support@bloatie.com'];
+            var email = ['support@mumusoft.com'];
             main.verifyFields([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}], function(result){
               expectError(result, main.getError('main', 'notValid'));
               delete(result.fields[0].data); //ignore additional data
@@ -328,8 +328,8 @@ describe("Main", function(){
           it("verification should fail", function(done){
             var phone = ' 1-(236) 212-2222 ';
             var cleanPhone = '2362122222'
-            var email = ' support@bloatie.com ';
-            var cleanEmail = 'support@bloatie.com';
+            var email = ' support@mumusoft.com ';
+            var cleanEmail = 'support@mumusoft.com';
             var phone2 = 'adfdsfdsfs';
             var email2 = 'sdfdfasdfsd';
             main.verify([{id: 'phone', type: 'phone', value: phone}, {id: 'email', type: 'email', value: email}, {id: 'phone2', type: 'phone', value: phone2, errorMessage: 'Custom error message'}, {id: 'email2', type: 'email', value: email2}], function(err, results){
@@ -344,8 +344,8 @@ describe("Main", function(){
           it("verification should pass", function(done){
             var phone = ' 1-(236) 212-2222 ';
             var cleanPhone = '2362122222'
-            var email = ' support@bloatie.com ';
-            var cleanEmail = 'support@bloatie.com';
+            var email = ' support@mumusoft.com ';
+            var cleanEmail = 'support@mumusoft.com';
             main.verify([{id: 'phone', type: 'phone', value: phone, errorId: 'phone-error', errorMessage: 'Phone number is invalid'}, {id: 'email', type: 'email', value: email}, {id: 'name', type: 'text', value: 'test'}], function(err, results){
               expect(err).to.be.null;
               delete(results[0].data); //ignore additional data
