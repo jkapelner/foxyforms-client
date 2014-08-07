@@ -76,12 +76,15 @@ var getContentLength = function(str) {
 };
 
 var jsonRequest = function(options, postData, callback) {
-  var json = JSON.stringify(postData);
+  var json;
   
   if (apiOptions.proxy) {
-		options.host = apiOptions.proxy;
+		postData.path = options.path;
+		options.host = apiOptions.proxy.host;
+		options.path = apiOptions.proxy.path;
 	}
 	
+	json = JSON.stringify(postData);
   options.method = 'POST';
   options.headers = {
     'Content-Type': 'application/json',
