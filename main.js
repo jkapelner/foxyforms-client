@@ -1,5 +1,5 @@
-var enableSSL = false;
-var apiOptions = {cleanInputs: true, ignoreServerErrors: false};
+var enableSSL = true;
+var apiOptions = {cleanInputs: true, ignoreServerErrors: false, proxy: null};
 var api = {
   host: 'verifly.bloatie.com',
   port: 80,
@@ -78,6 +78,10 @@ var getContentLength = function(str) {
 var jsonRequest = function(options, postData, callback) {
   var json = JSON.stringify(postData);
   
+  if (apiOptions.proxy) {
+		options.host = apiOptions.proxy;
+	}
+	
   options.method = 'POST';
   options.headers = {
     'Content-Type': 'application/json',
