@@ -7,6 +7,19 @@ lib-cov
 *.pid
 *.gz
 
+########################
+# misc / editors
+########################
+*~
+*#
+.DS_STORE
+.netbeans
+nbproject
+.idea
+curldata.txt
+/*.iml
+
+
 pids
 logs
 results
