@@ -1,5 +1,14 @@
-var enableSSL = true;
-var apiOptions = {cleanInputs: true, ignoreServerErrors: false, proxy: null};
+var enableSSL = false;
+var validator = false;
+//validator = require('validator'); /* un-comment out to enable local validation */
+
+var apiOptions = {
+	cleanInputs: true,
+	ignoreServerErrors: true,
+	ignoreSoftBounces: true,
+	proxy: null
+};
+
 var api = {
   host: 'verifly.bloatie.com',
   port: 80,
@@ -8,7 +17,7 @@ var api = {
   loginPath: '/verify/login'
 };
 
-var validator = require('validator');
+//var validator = require('validator'); /* comment out to disable local validation */
 var httpClient = require('./lib/node/http-client');
 var form = require('./lib/node/form');
 
@@ -25,13 +34,15 @@ var errorCodes = (function() {
       internal: {code: 502, message: 'Internal server error occurred'}
     },
     phone: {
-      badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
+			ok: {code: 200, message: 'Phone number is OK'},
+			badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
       badFormat: {code: 401, message: 'Data entered is not a valid phone number - must be 10 digits'},
       notValid: {code: 402, message: 'Phone number is invalid'},
       wrongCountry: {code: 403, message: "Phone number doesn't match the specified countries"},
       tollFree: {code: 404, message: "Phone number is a toll-free number, which is not allowed"}
     },
     email: {
+			ok: {code: 200, message: 'Email address is OK'},
       badType: {code: 400, message: 'Invalid data type passed - must be a string'},
       badFormat: {code: 401, message: 'Data entered is not a valid email address'},
       noMxRecords: {code: 402, message: 'No MX Records found for domain'},
@@ -111,45 +122,49 @@ var jsonRequest = function(options, postData, callback) {
 
 var validatorFuncs = {
   phone: function(phone) {
-    var type = typeof phone;
+		if (validator) {
+			var type = typeof phone;
 
-    if (type === 'number') {
-      phone = phone.toString();
-    }
-    else if (type !== 'string') {
-      return {result: false, error: errorCodes.get('phone', 'badType')};
-    }
+			if (type === 'number') {
+				phone = phone.toString();
+			}
+			else if (type !== 'string') {
+				return {result: false, error: errorCodes.get('phone', 'badType')};
+			}
 
-    if (apiOptions.cleanInputs) {
-      phone = phone.replace(/[\s\(\)-]/g, ''); //strip out phone formatter characters (i.e. spaces, dashes, parenthesis)
+			if (apiOptions.cleanInputs) {
+				phone = phone.replace(/[\s\(\)-]/g, ''); //strip out phone formatter characters (i.e. spaces, dashes, parenthesis)
 
-      if (phone[0] == 1) {
-          phone = phone.substr(1); //strip off leading '1'
-      }
-    }
+				if (phone[0] == 1) {
+					phone = phone.substr(1); //strip off leading '1'
+				}
+			}
 
-    //make sure phone number contains only 10 digits
-    if ((phone.length != 10) || phone.match(/[^0-9]/)) {
-      return {result: false, error: errorCodes.get('phone', 'badFormat')};
-    }
+			//make sure phone number contains only 10 digits
+			if ((phone.length != 10) || phone.match(/[^0-9]/)) {
+				return {result: false, error: errorCodes.get('phone', 'badFormat')};
+			}
+		}
 
     return {result: true, value: phone};
   },
   email: function(email) {
-    var type = typeof email;
+		if (validator) {
+			var type = typeof email;
 
-    if (type !== 'string') {
-      return {result: false, error: errorCodes.get('email', 'badType')};
-    }
+			if (type !== 'string') {
+				return {result: false, error: errorCodes.get('email', 'badType')};
+			}
 
-    if (apiOptions.cleanInputs) {
-      email = email.replace(/^\s+|\s+$/gm,''); //remove leading and trailing whitespace
-      email = email.toLowerCase();
-    }
+			if (apiOptions.cleanInputs) {
+				email = email.replace(/^\s+|\s+$/gm, ''); //remove leading and trailing whitespace
+				email = email.toLowerCase();
+			}
 
-    if (!validator.isEmail(email)) {
-      return {result: false, error: errorCodes.get('email', 'badFormat')};
-    }
+			if (!validator.isEmail(email)) {
+				return {result: false, error: errorCodes.get('email', 'badFormat')};
+			}
+		}
     
     return {result: true, value: email};
   }
@@ -184,14 +199,7 @@ var run = function(fields, callback) {
   
   if (fieldsToVerify.length > 0) {
     exports.verifyFields(fieldsToVerify, function(result){
-      var error;
-      
-      if (apiOptions.ignoreServerErrors && !result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
-        result.result = true; //ignore server errors
-        result.error = null;
-      }
-      
-      error = validate.result ? result.error : validate.error;
+      var error = validate.result ? result.error : validate.error;
       
       if (result.fields) {
         //merge the verification results back into the validation results, so we have the results of everything
@@ -199,7 +207,7 @@ var run = function(fields, callback) {
           for (var j = 0; j < validate.fields.length; j++) {
             if (validate.fields[j].id === result.fields[i].id) {
               validate.fields[j] = result.fields[i];
-              break;
+							break;
             }
           }
         }
@@ -279,7 +287,22 @@ exports.verifyFields = function(fields, callback) {
   }, {
     fields: fields,
     options: apiOptions
-  }, callback);
+  }, function(result) {
+		if (!result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
+			result.result = apiOptions.ignoreServerErrors; //ignore server errors
+			result.fields = fields;
+
+			//for each field that needed verification, but the server failed, assume success
+			for (var i = 0; i < result.fields.length; i++) {
+				if ((typeof(result.fields[i].result) === 'undefined') || (result.fields[i].result === null)) {
+					result.fields[i].result = apiOptions.ignoreServerErrors;
+					result.fields[i].error = errorCodes.get('main', 'serverComm');
+				}
+			}
+		}
+
+		callback(result);
+	});
 };
     
 exports.login = function(username, apiKey, callback) {
@@ -310,5 +333,9 @@ exports.isTypeSupported = function(type) {
 
 exports.getError = function(fieldType, errorType) {
   return errorCodes.get(fieldType, errorType);
+};
+
+exports.isLocalValidationEnabled = function() {
+	return validator ? true : false;
 };
 

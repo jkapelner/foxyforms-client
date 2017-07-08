@@ -45,7 +45,7 @@ module.exports = function(grunt) {
     if (apiKey && username) {
       var done = this.async();
       var debugCmd = debug ? '--debug-brk ' : '';
-      require('child_process').exec('mocha ' + debugCmd + '--reporter spec test/test.js --user=' + username + ' --apiKey=' + apiKey, function (err, stdout) {
+      require('child_process').exec('npm test ' + debugCmd + '-- --reporter spec test/test.js --user=' + username + ' --apiKey=' + apiKey, function (err, stdout) {
         grunt.log.write(stdout);
         done(err);
       });

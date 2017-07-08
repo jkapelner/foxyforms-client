@@ -1,7 +1,7 @@
-!function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.foxyformsClient=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"EkpMeO":[function(_dereq_,module,exports){
+require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"./lib/node/form":[function(require,module,exports){
 var formPrefix = 'foxyforms_';
 
-var validators = _dereq_('./validators.js');
+var validators = require('./validators.js');
 var initialized = false;
 
 var addEvent = function(elem, event, func, params) {
@@ -318,9 +318,7 @@ exports.init = function(forms, verifyController) {
   }
 };
 
-},{"./validators.js":5}],"./lib/node/form":[function(_dereq_,module,exports){
-module.exports=_dereq_('EkpMeO');
-},{}],"BX/C5g":[function(_dereq_,module,exports){
+},{"./validators.js":1}],"./lib/node/http-client":[function(require,module,exports){
 // ----------------------------------------------------------
 // A short snippet for detecting versions of IE in JavaScript
 // without resorting to user-agent sniffing
@@ -456,9 +454,7 @@ exports.request = function(options, postData, callback) {
 };
 
         
-},{}],"./lib/node/http-client":[function(_dereq_,module,exports){
-module.exports=_dereq_('BX/C5g');
-},{}],5:[function(_dereq_,module,exports){
+},{}],1:[function(require,module,exports){
 //update 3rd party validators such as jquery validate with our own validation methods
 exports.update = function(controller) {
   if (window.jQuery) { //if jquery is loaded
@@ -548,9 +544,18 @@ exports.update = function(controller) {
   }
 };
 
-},{}],6:[function(_dereq_,module,exports){
-var enableSSL = true;
-var apiOptions = {cleanInputs: true, ignoreServerErrors: false, proxy: null};
+},{}],2:[function(require,module,exports){
+var enableSSL = false;
+var validator = false;
+//validator = require('validator'); /* un-comment out to enable local validation */
+
+var apiOptions = {
+	cleanInputs: true,
+	ignoreServerErrors: true,
+	ignoreSoftBounces: true,
+	proxy: null
+};
+
 var api = {
   host: 'verifly.bloatie.com',
   port: 80,
@@ -559,9 +564,9 @@ var api = {
   loginPath: '/verify/login'
 };
 
-var validator = _dereq_('validator');
-var httpClient = _dereq_('./lib/node/http-client');
-var form = _dereq_('./lib/node/form');
+//var validator = require('validator'); /* comment out to disable local validation */
+var httpClient = require('./lib/node/http-client');
+var form = require('./lib/node/form');
 
 var errorCodes = (function() {
   var error = {
@@ -576,13 +581,15 @@ var errorCodes = (function() {
       internal: {code: 502, message: 'Internal server error occurred'}
     },
     phone: {
-      badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
+			ok: {code: 200, message: 'Phone number is OK'},
+			badType: {code: 400, message: 'Invalid data type passed - must be a string or number'},
       badFormat: {code: 401, message: 'Data entered is not a valid phone number - must be 10 digits'},
       notValid: {code: 402, message: 'Phone number is invalid'},
       wrongCountry: {code: 403, message: "Phone number doesn't match the specified countries"},
       tollFree: {code: 404, message: "Phone number is a toll-free number, which is not allowed"}
     },
     email: {
+			ok: {code: 200, message: 'Email address is OK'},
       badType: {code: 400, message: 'Invalid data type passed - must be a string'},
       badFormat: {code: 401, message: 'Data entered is not a valid email address'},
       noMxRecords: {code: 402, message: 'No MX Records found for domain'},
@@ -662,45 +669,49 @@ var jsonRequest = function(options, postData, callback) {
 
 var validatorFuncs = {
   phone: function(phone) {
-    var type = typeof phone;
+		if (validator) {
+			var type = typeof phone;
 
-    if (type === 'number') {
-      phone = phone.toString();
-    }
-    else if (type !== 'string') {
-      return {result: false, error: errorCodes.get('phone', 'badType')};
-    }
+			if (type === 'number') {
+				phone = phone.toString();
+			}
+			else if (type !== 'string') {
+				return {result: false, error: errorCodes.get('phone', 'badType')};
+			}
 
-    if (apiOptions.cleanInputs) {
-      phone = phone.replace(/[\s\(\)-]/g, ''); //strip out phone formatter characters (i.e. spaces, dashes, parenthesis)
+			if (apiOptions.cleanInputs) {
+				phone = phone.replace(/[\s\(\)-]/g, ''); //strip out phone formatter characters (i.e. spaces, dashes, parenthesis)
 
-      if (phone[0] == 1) {
-          phone = phone.substr(1); //strip off leading '1'
-      }
-    }
+				if (phone[0] == 1) {
+					phone = phone.substr(1); //strip off leading '1'
+				}
+			}
 
-    //make sure phone number contains only 10 digits
-    if ((phone.length != 10) || phone.match(/[^0-9]/)) {
-      return {result: false, error: errorCodes.get('phone', 'badFormat')};
-    }
+			//make sure phone number contains only 10 digits
+			if ((phone.length != 10) || phone.match(/[^0-9]/)) {
+				return {result: false, error: errorCodes.get('phone', 'badFormat')};
+			}
+		}
 
     return {result: true, value: phone};
   },
   email: function(email) {
-    var type = typeof email;
+		if (validator) {
+			var type = typeof email;
 
-    if (type !== 'string') {
-      return {result: false, error: errorCodes.get('email', 'badType')};
-    }
+			if (type !== 'string') {
+				return {result: false, error: errorCodes.get('email', 'badType')};
+			}
 
-    if (apiOptions.cleanInputs) {
-      email = email.replace(/^\s+|\s+$/gm,''); //remove leading and trailing whitespace
-      email = email.toLowerCase();
-    }
+			if (apiOptions.cleanInputs) {
+				email = email.replace(/^\s+|\s+$/gm, ''); //remove leading and trailing whitespace
+				email = email.toLowerCase();
+			}
 
-    if (!validator.isEmail(email)) {
-      return {result: false, error: errorCodes.get('email', 'badFormat')};
-    }
+			if (!validator.isEmail(email)) {
+				return {result: false, error: errorCodes.get('email', 'badFormat')};
+			}
+		}
     
     return {result: true, value: email};
   }
@@ -735,14 +746,7 @@ var run = function(fields, callback) {
   
   if (fieldsToVerify.length > 0) {
     exports.verifyFields(fieldsToVerify, function(result){
-      var error;
-      
-      if (apiOptions.ignoreServerErrors && !result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
-        result.result = true; //ignore server errors
-        result.error = null;
-      }
-      
-      error = validate.result ? result.error : validate.error;
+      var error = validate.result ? result.error : validate.error;
       
       if (result.fields) {
         //merge the verification results back into the validation results, so we have the results of everything
@@ -750,7 +754,7 @@ var run = function(fields, callback) {
           for (var j = 0; j < validate.fields.length; j++) {
             if (validate.fields[j].id === result.fields[i].id) {
               validate.fields[j] = result.fields[i];
-              break;
+							break;
             }
           }
         }
@@ -830,7 +834,22 @@ exports.verifyFields = function(fields, callback) {
   }, {
     fields: fields,
     options: apiOptions
-  }, callback);
+  }, function(result) {
+		if (!result.result && result.error && (result.error.code >= 500) && (result.error.code < 600)) {
+			result.result = apiOptions.ignoreServerErrors; //ignore server errors
+			result.fields = fields;
+
+			//for each field that needed verification, but the server failed, assume success
+			for (var i = 0; i < result.fields.length; i++) {
+				if ((typeof(result.fields[i].result) === 'undefined') || (result.fields[i].result === null)) {
+					result.fields[i].result = apiOptions.ignoreServerErrors;
+					result.fields[i].error = errorCodes.get('main', 'serverComm');
+				}
+			}
+		}
+
+		callback(result);
+	});
 };
     
 exports.login = function(username, apiKey, callback) {
@@ -863,344 +882,9 @@ exports.getError = function(fieldType, errorType) {
   return errorCodes.get(fieldType, errorType);
 };
 
+exports.isLocalValidationEnabled = function() {
+	return validator ? true : false;
+};
 
-},{"./lib/node/form":"EkpMeO","./lib/node/http-client":"BX/C5g","validator":7}],7:[function(_dereq_,module,exports){
-/*!
- * Copyright (c) 2014 Chris O'Hara <cohara87@gmail.com>
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 
-(function (name, definition) {
-    if (typeof module !== 'undefined') {
-        module.exports = definition();
-    } else if (typeof define === 'function' && typeof define.amd === 'object') {
-        define(definition);
-    } else {
-        this[name] = definition();
-    }
-})('validator', function (validator) {
-
-    'use strict';
-
-    validator = { version: '3.2.1' };
-
-    var email = /^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/;
-
-    var url = /^(?!mailto:)(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[0-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))|localhost)(?::\d{2,5})?(?:\/[^\s]*)?$/i;
-
-    var creditCard = /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/;
-
-    var isbn10Maybe = /^(?:[0-9]{9}X|[0-9]{10})$/
-      , isbn13Maybe = /^(?:[0-9]{13})$/;
-
-    var ipv4Maybe = /^(\d?\d?\d)\.(\d?\d?\d)\.(\d?\d?\d)\.(\d?\d?\d)$/
-      , ipv6 = /^::|^::1|^([a-fA-F0-9]{1,4}::?){1,7}([a-fA-F0-9]{1,4})$/;
-
-    var uuid = {
-        '3': /^[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i
-      , '4': /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i
-      , '5': /^[0-9A-F]{8}-[0-9A-F]{4}-5[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i
-      , all: /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i
-    };
-
-    var alpha = /^[a-zA-Z]+$/
-      , alphanumeric = /^[a-zA-Z0-9]+$/
-      , numeric = /^-?[0-9]+$/
-      , int = /^(?:-?(?:0|[1-9][0-9]*))$/
-      , float = /^(?:-?(?:[0-9]+))?(?:\.[0-9]*)?(?:[eE][\+\-]?(?:[0-9]+))?$/
-      , hexadecimal = /^[0-9a-fA-F]+$/
-      , hexcolor = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
-    validator.extend = function (name, fn) {
-        validator[name] = function () {
-            var args = Array.prototype.slice.call(arguments);
-            args[0] = validator.toString(args[0]);
-            return fn.apply(validator, args);
-        };
-    };
-
-    validator.noCoerce = ['toString', 'toDate', 'extend', 'init'];
-
-    //Right before exporting the validator object, pass each of the builtins
-    //through extend() so that their first argument is coerced to a string
-    validator.init = function () {
-        for (var name in validator) {
-            if (typeof validator[name] !== 'function' || validator.noCoerce.indexOf(name) >= 0) {
-                continue;
-            }
-            validator.extend(name, validator[name]);
-        }
-    };
-
-    validator.toString = function (input) {
-        if (input === null || typeof input === 'undefined' || (isNaN(input) && !input.length)) {
-            input = '';
-        } else if (typeof input === 'object' && input.toString) {
-            input = input.toString();
-        } else if (typeof input !== 'string') {
-            input += '';
-        }
-        return input;
-    };
-
-    validator.toDate = function (date) {
-        if (Object.prototype.toString.call(date) === '[object Date]') {
-            return date;
-        }
-        date = Date.parse(date);
-        return !isNaN(date) ? new Date(date) : null;
-    };
-
-    validator.toFloat = function (str) {
-        return parseFloat(str);
-    };
-
-    validator.toInt = function (str, radix) {
-        return parseInt(str, radix || 10);
-    };
-
-    validator.toBoolean = function (str, strict) {
-        if (strict) {
-            return str === '1' || str === 'true';
-        }
-        return str !== '0' && str !== 'false' && str !== '';
-    };
-
-    validator.equals = function (str, comparison) {
-        return str === validator.toString(comparison);
-    };
-
-    validator.contains = function (str, elem) {
-        return str.indexOf(validator.toString(elem)) >= 0;
-    };
-
-    validator.matches = function (str, pattern, modifiers) {
-        if (Object.prototype.toString.call(pattern) !== '[object RegExp]') {
-            pattern = new RegExp(pattern, modifiers);
-        }
-        return pattern.test(str);
-    };
-
-    validator.isEmail = function (str) {
-        return email.test(str);
-    };
-
-    validator.isURL = function (str) {
-        return str.length < 2083 && url.test(str);
-    };
-
-    validator.isIP = function (str, version) {
-        version = validator.toString(version);
-        if (!version) {
-            return validator.isIP(str, 4) || validator.isIP(str, 6);
-        } else if (version === '4') {
-            if (!ipv4Maybe.test(str)) {
-                return false;
-            }
-            var parts = str.split('.').sort();
-            return parts[3] <= 255;
-        }
-        return version === '6' && ipv6.test(str);
-    };
-
-    validator.isAlpha = function (str) {
-        return alpha.test(str);
-    };
-
-    validator.isAlphanumeric = function (str) {
-        return alphanumeric.test(str);
-    };
-
-    validator.isNumeric = function (str) {
-        return numeric.test(str);
-    };
-
-    validator.isHexadecimal = function (str) {
-        return hexadecimal.test(str);
-    };
-
-    validator.isHexColor = function (str) {
-        return hexcolor.test(str);
-    };
-
-    validator.isLowercase = function (str) {
-        return str === str.toLowerCase();
-    };
-
-    validator.isUppercase = function (str) {
-        return str === str.toUpperCase();
-    };
-
-    validator.isInt = function (str) {
-        return int.test(str);
-    };
-
-    validator.isFloat = function (str) {
-        return str !== '' && float.test(str);
-    };
-
-    validator.isDivisibleBy = function (str, num) {
-        return validator.toFloat(str) % validator.toInt(num) === 0;
-    };
-
-    validator.isNull = function (str) {
-        return str.length === 0;
-    };
-
-    validator.isLength = function (str, min, max) {
-        return str.length >= min && (typeof max === 'undefined' || str.length <= max);
-    };
-
-    validator.isUUID = function (str, version) {
-        var pattern = uuid[version ? version : 'all'];
-        return pattern && pattern.test(str);
-    };
-
-    validator.isDate = function (str) {
-        return !isNaN(Date.parse(str));
-    };
-
-    validator.isAfter = function (str, date) {
-        var comparison = validator.toDate(date || new Date())
-          , original = validator.toDate(str);
-        return original && comparison && original > comparison;
-    };
-
-    validator.isBefore = function (str, date) {
-        var comparison = validator.toDate(date || new Date())
-          , original = validator.toDate(str);
-        return original && comparison && original < comparison;
-    };
-
-    validator.isIn = function (str, options) {
-        if (!options || typeof options.indexOf !== 'function') {
-            return false;
-        }
-        if (Object.prototype.toString.call(options) === '[object Array]') {
-            var array = [];
-            for (var i = 0, len = options.length; i < len; i++) {
-                array[i] = validator.toString(options[i]);
-            }
-            options = array;
-        }
-        return options.indexOf(str) >= 0;
-    };
-
-    validator.isCreditCard = function (str) {
-        var sanitized = str.replace(/[^0-9]+/g, '');
-        if (!creditCard.test(sanitized)) {
-            return false;
-        }
-        var sum = 0, digit, tmpNum, shouldDouble;
-        for (var i = sanitized.length - 1; i >= 0; i--) {
-            digit = sanitized.substring(i, (i + 1));
-            tmpNum = parseInt(digit, 10);
-            if (shouldDouble) {
-                tmpNum *= 2;
-                if (tmpNum >= 10) {
-                    sum += ((tmpNum % 10) + 1);
-                } else {
-                    sum += tmpNum;
-                }
-            } else {
-                sum += tmpNum;
-            }
-            shouldDouble = !shouldDouble;
-        }
-        return (sum % 10) === 0 ? sanitized : false;
-    };
-
-    validator.isISBN = function (str, version) {
-        version = validator.toString(version);
-        if (!version) {
-            return validator.isISBN(str, 10) || validator.isISBN(str, 13);
-        }
-        var sanitized = str.replace(/[\s-]+/g, '')
-          , checksum = 0, i;
-        if (version === '10') {
-            if (!isbn10Maybe.test(sanitized)) {
-                return false;
-            }
-            for (i = 0; i < 9; i++) {
-                checksum += (i + 1) * sanitized.charAt(i);
-            }
-            if (sanitized.charAt(9) === 'X') {
-                checksum += 10 * 10;
-            } else {
-                checksum += 10 * sanitized.charAt(9);
-            }
-            if ((checksum % 11) === 0) {
-                return sanitized;
-            }
-        } else  if (version === '13') {
-            if (!isbn13Maybe.test(sanitized)) {
-                return false;
-            }
-            var factor = [ 1, 3 ];
-            for (i = 0; i < 12; i++) {
-                checksum += factor[i % 2] * sanitized.charAt(i);
-            }
-            if (sanitized.charAt(12) - ((10 - (checksum % 10)) % 10) === 0) {
-                return sanitized;
-            }
-        }
-        return false;
-    };
-
-    validator.ltrim = function (str, chars) {
-        var pattern = chars ? new RegExp('^[' + chars + ']+', 'g') : /^\s+/g;
-        return str.replace(pattern, '');
-    };
-
-    validator.rtrim = function (str, chars) {
-        var pattern = chars ? new RegExp('[' + chars + ']+$', 'g') : /\s+$/g;
-        return str.replace(pattern, '');
-    };
-
-    validator.trim = function (str, chars) {
-        var pattern = chars ? new RegExp('^[' + chars + ']+|[' + chars + ']+$', 'g') : /^\s+|\s+$/g;
-        return str.replace(pattern, '');
-    };
-
-    validator.escape = function (str) {
-        return (str.replace(/&/g, '&amp;')
-            .replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;'));
-    };
-
-    validator.whitelist = function (str, chars) {
-        return str.replace(new RegExp('[^' + chars + ']+', 'g'), '');
-    };
-
-    validator.blacklist = function (str, chars) {
-        return str.replace(new RegExp('[' + chars + ']+', 'g'), '');
-    };
-
-    validator.init();
-
-    return validator;
-
-});
-
-},{}]},{},[6])
-(6)
-});
+},{"./lib/node/form":"./lib/node/form","./lib/node/http-client":"./lib/node/http-client"}]},{},[2]);
