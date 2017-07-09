@@ -557,7 +557,7 @@ var apiOptions = {
 };
 
 var api = {
-  host: 'verifly.bloatie.com',
+  host: 'api.foxyforms.com',
   port: 80,
   sslPort: 443,
   path: '/verify',
