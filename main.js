@@ -199,7 +199,7 @@ var run = function(fields, callback) {
   
   if (fieldsToVerify.length > 0) {
     exports.verifyFields(fieldsToVerify, function(result){
-      var error = validate.result ? result.error : validate.error;
+      var error = validate.result ? (result.result ? null : result.error) : validate.error;
       
       if (result.fields) {
         //merge the verification results back into the validation results, so we have the results of everything
