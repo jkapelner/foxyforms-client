@@ -89,7 +89,7 @@ var getContentLength = function(str) {
 var jsonRequest = function(options, postData, callback) {
   var json;
 
-	if (typeof(apiOptions.proxy) !== 'undefined') {
+	if (apiOptions.proxy) {
 		if (typeof(apiOptions.proxy.host) !== 'undefined') {
 			options.host = apiOptions.proxy.host;
 		}
