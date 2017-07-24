@@ -93,6 +93,10 @@ var jsonRequest = function(options, postData, callback) {
 		postData.path = options.path;
 		options.host = apiOptions.proxy.host;
 		options.path = apiOptions.proxy.path;
+
+		if (typeof(apiOptions.proxy.port) !== 'undefined') {
+			options.port = apiOptions.proxy.port;
+		}
 	}
 	
 	json = JSON.stringify(postData);
