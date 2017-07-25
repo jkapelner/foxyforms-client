@@ -1,4 +1,3 @@
-var enableSSL = false;
 var validator = false;
 //validator = require('validator'); /* un-comment out to enable local validation */
 
@@ -6,7 +5,8 @@ var apiOptions = {
 	cleanInputs: true,
 	ignoreServerErrors: true,
 	ignoreSoftBounces: true,
-	proxy: null
+	proxy: null,
+	secure: true
 };
 
 var api = {
@@ -286,7 +286,7 @@ exports.validateFields = function(fields) {
 };
 
 exports.verifyFields = function(fields, callback) {
-  var useSSL = enableSSL && (apiOptions.apiKey || apiOptions.useSSL) ? true : false;
+  var useSSL = apiOptions.secure ? true : false;
   
   jsonRequest({
     scheme: useSSL ? 'https' : 'http',
@@ -316,9 +316,9 @@ exports.verifyFields = function(fields, callback) {
     
 exports.login = function(username, apiKey, callback) {
   jsonRequest({
-    scheme: enableSSL ? 'https' : 'http',
+    scheme: apiOptions.secure ? 'https' : 'http',
     host: api.host,
-    port: enableSSL ? api.sslPort : api.port,
+    port: apiOptions.secure ? api.sslPort : api.port,
     path: api.loginPath
   }, {
     username: username,
