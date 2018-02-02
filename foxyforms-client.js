@@ -66,7 +66,7 @@ var getFieldAttributes = function(field) {
     
     if (elem) {
       if (typeof field.required === 'undefined') {
-        field.required = elem.getAttributeNode(formPrefix + 'required') ? true : (elem.getAttributeNode('required') ? true : false);
+        field.required = elem.getAttribute(formPrefix + 'required') ? true : (elem.getAttribute('required') ? true : false);
       }
       
       field.value = elem.value; //always get the latest value from the form
@@ -654,8 +654,7 @@ var jsonRequest = function(options, postData, callback) {
 	json = JSON.stringify(postData);
   options.method = 'POST';
   options.headers = {
-    'Content-Type': 'application/json',
-    'Content-Length': getContentLength(json)
+    'Content-Type': 'application/json'
   };
   httpClient.request(options, json, function(err, response) {
     if (err) { //server error

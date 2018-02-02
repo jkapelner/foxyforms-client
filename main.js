@@ -107,8 +107,7 @@ var jsonRequest = function(options, postData, callback) {
 	json = JSON.stringify(postData);
   options.method = 'POST';
   options.headers = {
-    'Content-Type': 'application/json',
-    'Content-Length': getContentLength(json)
+    'Content-Type': 'application/json'
   };
   httpClient.request(options, json, function(err, response) {
     if (err) { //server error
